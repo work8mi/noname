@@ -41,6 +41,8 @@ export interface RunState {
 	usedEvents: string[];
 	/** 下一场战斗敌人的额外体力上限（事件代价）。 */
 	nextBattleEnemyHp: number;
+	/** 当前章节已售卖卡牌次数。 */
+	salesUsed: number;
 }
 
 export function createRunState(seed: string, character = "zhaoyun", maxHp = 4, gold = 100): RunState {
@@ -63,6 +65,7 @@ export function createRunState(seed: string, character = "zhaoyun", maxHp = 4, g
 		finished: false,
 		usedEvents: [],
 		nextBattleEnemyHp: 0,
+		salesUsed: 0,
 	};
 }
 

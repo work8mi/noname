@@ -46,6 +46,7 @@ export async function runFlow(event: any, meta: MetaUI, state: RunState, debug: 
 			await meta.showChapterClear(state.chapter, state);
 			state.chapter++;
 			state.layer = 0;
+			state.salesUsed = 0;
 			map = generateChapter(state.seed, state.chapter);
 			saveRun(state);
 			continue;

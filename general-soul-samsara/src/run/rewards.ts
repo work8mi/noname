@@ -5,19 +5,19 @@ import { getRecipeOutput } from "../data/recipes";
 import type { SkillMeta } from "../shared/types";
 import { equippedTags, hasSkill, type RunState } from "./state";
 
-/** 普通战金币 15-25（概要设计 §7.1）。 */
+/** 普通战金币 20-30（卡牌不再由战斗掉落，金币为主要产出）。 */
 export function rollGold(rng: Rng): number {
-	return 15 + rng.int(11);
+	return 20 + rng.int(11);
 }
 
-/** 精英战金币 40-60。 */
+/** 精英战金币 50-70。 */
 export function rollEliteGold(rng: Rng): number {
-	return 40 + rng.int(21);
+	return 50 + rng.int(21);
 }
 
-/** 首领战金币 80-120（概要设计 §7.1）。 */
+/** 首领战金币 100-140。 */
 export function rollBossGold(rng: Rng): number {
-	return 80 + rng.int(41);
+	return 100 + rng.int(41);
 }
 
 export function availableSkillPool(state: RunState): SkillMeta[] {
@@ -129,6 +129,22 @@ export function rollShopCards(rng: Rng, count = 5): string[] {
 		result.push(pool.splice(rng.int(pool.length), 1)[0]);
 	}
 	return result;
+}
+
+/** 每章可售卖卡牌次数（需求规格 §7.1）。 */
+export const MAX_SALES_PER_CHAPTER = 3;
+
+/** 售卖卡牌的金币回收价：基本牌 15 / 锦囊与装备 30 / 诅咒与未知 10。 */
+export function sellPrice(id: string): number {
+	const card = getShopCard(id);
+	if (!card) return 10;
+	if (card.kind === "basic") return 15;
+	return 30;
+}
+
+/** 本章剩余售卖次数。 */
+export function salesLeft(state: RunState): number {
+	return Math.max(0, MAX_SALES_PER_CHAPTER - (state.salesUsed ?? 0));
 }
 
 /** 事件奖励的技能：优先指定 id，缺失或已拥有时按类型随机。 */

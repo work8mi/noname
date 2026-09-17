@@ -21,6 +21,7 @@ export function deserializeRun(raw: string | null | undefined): RunState | undef
 		// 旧档补齐可选字段，避免版本迁移。
 		state.usedEvents ??= [];
 		state.nextBattleEnemyHp ??= 0;
+		state.salesUsed ??= 0;
 		state.treasures ??= [];
 		return state;
 	} catch {

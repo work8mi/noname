@@ -7,7 +7,7 @@ import type { EventOption, RunEventDef } from "../run/events";
 import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, slotList, upgradeCardAt, upgradeSkillAt, MAX_SKILL_LEVEL, type RunCard, type RunState } from "../run/state";
 import { availableRecipes, applyRecipe } from "../run/craft";
 import type { RecipeDef } from "../data/recipes";
-import { availableSkillPool, cardKindLabel, cardPrice, removeCardPrice, rollShopCards, skillPrice } from "../run/rewards";
+import { availableSkillPool, cardKindLabel, cardPrice, MAX_SALES_PER_CHAPTER, removeCardPrice, rollShopCards, salesLeft, sellPrice, skillPrice } from "../run/rewards";
 import { QUALITY_LABELS, getTreasure, rollTreasure, treasurePrice, type TreasureDef } from "../data/treasures";
 import { isUpgradable, upgradeEffect } from "../data/upgrades";
 
@@ -51,6 +51,8 @@ interface DeckPrompt {
 	title: string;
 	/** true 时为升级选择器，否则为删除选择器。 */
 	upgrade?: boolean;
+	/** true 时为售卖选择器（显示回收价）。 */
+	sell?: boolean;
 	/** 不可选的牌（升级选择器用于过滤已升级或不可升级的牌）。 */
 	filter?: (card: RunCard, index: number) => boolean;
 	complete: (index: number) => void;
@@ -138,6 +140,7 @@ function renderDeckPrompt(prompt: DeckPrompt): VNode {
 					{ class: ["rogue-card", disabled ? "rogue-disabled" : ""], onClick: disabled ? undefined : () => prompt.complete(index) },
 					[
 						h("div", { class: "rogue-card-name" }, label),
+						prompt.sell ? h("div", { class: "rogue-card-kind" }, `卖出 ${sellPrice(card.id)} 金币`) : null,
 						prompt.upgrade && !card.upgraded && isUpgradable(card.id) ? h("div", { class: "rogue-card-tags" }, upgradeEffect(card.id)) : null,
 					]
 				);
@@ -433,6 +436,11 @@ function renderView(current: View): VNode {
 						() => buyRemove(current),
 						current.state.gold < removeCardPrice(current.state) || current.state.deck.length <= 1
 					),
+					button(
+						`卖牌（本章 ${salesLeft(current.state)}/${MAX_SALES_PER_CHAPTER} 次）`,
+						() => promptSell(current.state),
+						salesLeft(current.state) <= 0 || current.state.deck.length <= 1
+					),
 					button("升级（75 金币）", () => buyUpgrade(current), current.state.gold < UPGRADE_PRICE || !hasUpgradable(current.state)),
 					button("刷新（25 金币）", () => refreshShop(current), current.state.gold < 25),
 					button("离开", () => current.resolve()),
@@ -536,6 +544,27 @@ function buyRemove(current: Extract<View, { kind: "shop" }>): void {
 	const price = removeCardPrice(current.state);
 	if (current.state.gold < price || current.state.deck.length <= 1) return;
 	promptDelete(current.state, () => addGold(current.state, -price));
+}
+
+/** 售卖卡牌：本章限次，换取金币后从牌组移除。 */
+function promptSell(state: RunState): void {
+	if (salesLeft(state) <= 0 || state.deck.length <= 1) return;
+	deckPrompt.value = {
+		title: "选择要卖出的牌",
+		sell: true,
+		complete: index => {
+			const card = state.deck[index];
+			if (!card) return;
+			addGold(state, sellPrice(card.id));
+			removeCardAt(state, index);
+			state.salesUsed = (state.salesUsed ?? 0) + 1;
+			deckPrompt.value = null;
+			tick.value++;
+		},
+		cancel: () => {
+			deckPrompt.value = null;
+		},
+	};
 }
 
 function buyUpgrade(current: Extract<View, { kind: "shop" }>): void {
