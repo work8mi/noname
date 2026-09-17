@@ -9,12 +9,13 @@
 - `packages/jit` — service-worker/Vite plugin that compiles TypeScript in the browser, which is why `.ts` content packs work in a built game.
 - `packages/server` — multiplayer WebSocket server (port 8082).
 - `apps/electron`, `apps/mobile` — desktop/mobile shells. `packages/extension/<name>` — extension dev workspace (gitignored except an allowlist); scaffolds come from `scripts/extension-template/`.
+- `general-soul-samsara/` — 将魂轮回, the roguelike mode built on the engine (workspace package `@noname/general-soul-samsara`). Its Vite build emits `apps/core/mode/general-soul-samsara.js`; design docs in `general-soul-samsara/docs/` and glossary in `general-soul-samsara/CONTEXT.md`.
 - `docs/` — Chinese dev references (event system, async skills, startup flow); copied to `dist/docs` by the build.
 
 ## Commands
 
 - `pnpm install` — Node `^20.19.0 || >=22.12.0`, pnpm `>= 9` (CI uses Node 24 + pnpm 10). The workspace uses `sharedWorkspaceLockfile: false`: each package keeps its own `pnpm-lock.yaml`. Add deps with `pnpm --filter <pkg> add <dep>`; never hand-edit lockfiles.
-- `pnpm dev` — three watchers: `@noname/fs` file API (8089), extension `build:watch`, and the core Vite dev server at `http://127.0.0.1:8081` (`docs/how-to-start.md` says 8080 — stale). The file API must be running or save/load features break.
+- `pnpm dev` — watchers: `@noname/fs` file API (8089), extension `build:watch`, `@noname/general-soul-samsara` `build:watch`, and the core Vite dev server at `http://127.0.0.1:8081` (`docs/how-to-start.md` says 8080 — stale). The file API must be running or save/load features break.
 - `pnpm lint` — recursive per-package ESLint, with narrow globs: `apps/core` lints only `noname/**`, so edits in `character/`, `card/`, `mode/`, `extension/` are not checked. Single package: `pnpm -F noname lint`.
 - `pnpm build` — builds core and its workspace deps (`pnpm -F noname... build`), then extension packages, then merges `apps/core/dist` + audio/image/extension + docs into root `dist/`. Core only: `pnpm -F noname build`.
 - `pnpm serve` / `pnpm start` — serve the built root `dist/` via `@noname/fs`.
@@ -23,10 +24,11 @@
 - `pnpm init:extension <name> [--author x] [--vue]` — scaffold at `packages/extension/<name>`; its Vite build outputs to `apps/core/extension/<name>`.
 - `pnpm -F @noname/server dev` — multiplayer server on 8082. `pnpm -F @noname/electron build:win|build:mac|build:linux` requires a prior `pnpm build` and writes to `./output`. `pnpm -F @noname/mobile build:android` needs Android SDK/JDK 21.
 - `pnpm -F noname build:types` — emit `apps/core/dist-types/noname.d.ts`, the types extension packages consume.
+- `pnpm -F @noname/general-soul-samsara build|lint|test|test:e2e` — roguelike mode build (required before `pnpm dev`/E2E; `build:watch` covers it during `pnpm dev`), ESLint, Vitest unit tests, Playwright E2E. E2E needs the built mode file and starts `@noname/fs` + the Vite dev server itself.
 
 ## Verification
 
-There is no test framework, test script, or test file in the repo. Verify with `pnpm lint` plus `pnpm -F noname build` (or `pnpm build`), then play the affected flow through `pnpm dev`. CI lints only packages changed against the base branch.
+The host repo has no test framework, test script, or test file. Verify host changes with `pnpm lint` plus `pnpm -F noname build` (or `pnpm build`), then play the affected flow through `pnpm dev`. CI lints only packages changed against the base branch. The exception is `@noname/general-soul-samsara`, which has Vitest unit tests and Playwright E2E (`pnpm -F @noname/general-soul-samsara test` / `test:e2e`) and its own CI workflow.
 
 ## Conventions that differ from defaults
 
