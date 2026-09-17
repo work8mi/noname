@@ -25,6 +25,18 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 		if (hidden === open) await page.locator(".rogue-debug-button").click();
 	};
 
+	/** 结束当前出牌阶段并处理强制弃牌。 */
+	const finishPlayerTurn = async () => {
+		await page.locator("#control").getByText("结束回合").click();
+		await page.waitForTimeout(1000);
+		const selectAll = page.locator("#control").getByText("全选", { exact: true });
+		if ((await selectAll.count()) > 0) {
+			await selectAll.first().click();
+			const confirm = page.locator("#control").getByText("确定", { exact: true });
+			if ((await confirm.count()) > 0) await confirm.first().click();
+		}
+	};
+
 	await page.goto("/");
 	await page.waitForSelector("#window", { state: "attached", timeout: 120_000 });
 
@@ -61,14 +73,7 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await setDebugPanelOpen(true);
 	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "直接胜利" }).click();
 	// 判定在玩家当前行动结束后生效：结束出牌阶段，并处理弃牌阶段的强制弃牌
-	await page.locator("#control").getByText("结束回合").click();
-	await page.waitForTimeout(1000);
-	const selectAll = page.locator("#control").getByText("全选", { exact: true });
-	if ((await selectAll.count()) > 0) {
-		await selectAll.first().click();
-		const confirm = page.locator("#control").getByText("确定", { exact: true });
-		if ((await confirm.count()) > 0) await confirm.first().click();
-	}
+	await finishPlayerTurn();
 	await expect(page.locator(".rogue-title")).toHaveText("战斗胜利", { timeout: 60_000 });
 	await page.locator(".rogue-card").first().click();
 	await expect(page.locator(".rogue-title")).toHaveText("第 1 章", { timeout: 30_000 });
@@ -106,5 +111,39 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await page.locator(".rogue-button", { hasText: "查看牌组" }).click();
 	await expect(page.locator(".rogue-card-name", { hasText: "毒" })).toBeVisible({ timeout: 30_000 });
 	await page.locator(".rogue-button", { hasText: "返回" }).click();
+
+	// 章尾精英：跳到章尾 → 华雄 → 奖励 → 章间过渡
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "跳到章尾" }).click();
+	await setDebugPanelOpen(false);
+	await page.locator(".rogue-node-current", { hasText: "精英" }).click();
+	await expect(page.locator(".rogue-intent").first()).toBeVisible({ timeout: 60_000 });
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "直接胜利" }).click();
+	await setDebugPanelOpen(false);
+	await finishPlayerTurn();
+	await expect(page.locator(".rogue-title")).toHaveText("获得宝物", { timeout: 60_000 });
+	await page.locator(".rogue-button", { hasText: "领取" }).click();
+	await expect(page.locator(".rogue-title")).toHaveText("战斗胜利", { timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "跳过" }).click();
+	await expect(page.locator(".rogue-title")).toHaveText("第 1 章完成", { timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "进入下一章" }).click();
+	await expect(page.locator(".rogue-title")).toHaveText("第 2 章", { timeout: 30_000 });
+
+	// 终局首领：张角 → 通关结算
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "跳到章尾" }).click();
+	await setDebugPanelOpen(false);
+	await page.locator(".rogue-node-current", { hasText: "首领" }).click();
+	await expect(page.locator(".rogue-intent").first()).toBeVisible({ timeout: 60_000 });
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "直接胜利" }).click();
+	await setDebugPanelOpen(false);
+	await finishPlayerTurn();
+	await expect(page.locator(".rogue-title")).toHaveText("获得宝物", { timeout: 60_000 });
+	await page.locator(".rogue-button", { hasText: "领取" }).click();
+	await expect(page.locator(".rogue-title")).toHaveText("战斗胜利", { timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "跳过" }).click();
+	await expect(page.locator(".rogue-title")).toHaveText("章节通关", { timeout: 30_000 });
 	expect(errors).toEqual([]);
 });
