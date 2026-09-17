@@ -145,6 +145,95 @@ export const rogue_zhugeliannu = {
 	},
 };
 
+/** 方天画戟：你的杀被闪抵消后，本回合下一张杀不可闪避。 */
+export const rogue_fangtian = {
+	trigger: { global: "shaMiss", player: ["phaseBegin", "useCardToPlayered"] },
+	forced: true,
+	popup: false,
+	filter(event: any, player: any) {
+		if (event.name === "phase") return true;
+		if (event.triggername === "shaMiss") return event.card?.name === "sha" && event.source === player;
+		return event.card?.name === "sha" && Boolean(player.storage.rogue_fangtian);
+	},
+	async content(event: any, trigger: any, player: any) {
+		if (trigger.name === "phase") {
+			player.storage.rogue_fangtian = false;
+			return;
+		}
+		if (trigger.triggername === "shaMiss") {
+			player.storage.rogue_fangtian = true;
+			return;
+		}
+		player.storage.rogue_fangtian = false;
+		trigger.getParent()?.directHit.add(trigger.target);
+	},
+};
+
+/** 太平要术：每回合首次判定自动成功；每次判定后摸 1。 */
+export const rogue_taiping = {
+	trigger: { player: ["phaseBegin", "judgeEnd"] },
+	forced: true,
+	popup: false,
+	filter(event: any, player: any) {
+		if (event.name === "phase") return true;
+		return Boolean(event.result?.card);
+	},
+	async content(event: any, trigger: any, player: any) {
+		if (trigger.name === "phase") {
+			player.storage.rogue_taiping_used = false;
+			return;
+		}
+		if (!player.storage.rogue_taiping_used && trigger.result.bool === false) {
+			trigger.result.bool = true;
+			player.popup("太平要术");
+		}
+		player.storage.rogue_taiping_used = true;
+		await player.draw({ nodelay: true });
+	},
+};
+
+/** 血诏：每回合首次受伤后摸 1 并回复 1（卖血触发的等价落地）。 */
+export const rogue_xuezhao = {
+	trigger: { player: ["phaseBegin", "damageEnd"] },
+	forced: true,
+	popup: false,
+	filter(event: any, player: any) {
+		if (event.name === "phase") return true;
+		return event.num > 0 && !player.storage.rogue_xuezhao_used;
+	},
+	async content(event: any, trigger: any, player: any) {
+		if (trigger.name === "phase") {
+			player.storage.rogue_xuezhao_used = false;
+			return;
+		}
+		player.storage.rogue_xuezhao_used = true;
+		await player.draw({ nodelay: true });
+		await player.recover();
+	},
+};
+
+/** 青囊书：回合开始卖血摸牌；每场战斗首次濒死回复至 1。 */
+export const rogue_qingnang = {
+	trigger: { player: ["phaseBegin", "dying"] },
+	forced: true,
+	popup: false,
+	filter(event: any, player: any) {
+		if (event.name === "phase") return true;
+		return !player.storage.rogue_qingnang_saved;
+	},
+	async content(event: any, trigger: any, player: any) {
+		if (trigger.name === "phase") {
+			if (player.hp > 1) {
+				await player.loseHp();
+				await player.draw({ nodelay: true });
+			}
+			return;
+		}
+		player.storage.rogue_qingnang_saved = true;
+		await player.recoverTo(1);
+	},
+};
+
 export const TREASURE_SKILLS: Record<string, any> = {
 	rogue_rule_draw,
 	rogue_paoxiaoling,
@@ -154,4 +243,8 @@ export const TREASURE_SKILLS: Record<string, any> = {
 	rogue_qinglong,
 	rogue_yuxi,
 	rogue_zhugeliannu,
+	rogue_fangtian,
+	rogue_taiping,
+	rogue_xuezhao,
+	rogue_qingnang,
 };
