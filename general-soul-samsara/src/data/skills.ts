@@ -67,7 +67,7 @@ export const M03_SKILLS: readonly SkillMeta[] = [
 		name: "铁骑",
 		kind: "active",
 		tags: ["杀", "控制"],
-		quality: "rare",
+		quality: "legendary",
 		levels: ["判定为红色时【杀】伤害 +1。", "判定为红色时不可被闪避且摸 1 张牌。"],
 	},
 	{
@@ -91,7 +91,7 @@ export const M03_SKILLS: readonly SkillMeta[] = [
 		name: "鬼才",
 		kind: "passive",
 		tags: ["判定"],
-		quality: "rare",
+		quality: "legendary",
 		levels: ["改判后可摸 1 张牌。", "改判后可令此次判定结果颜色由你决定。"],
 	},
 	{

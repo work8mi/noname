@@ -2,7 +2,7 @@ import type { Rng } from "../shared/rng";
 import { isSkillBlacklisted } from "../data/blacklist";
 import { ALL_GENERAL_SKILLS, getSkillMeta } from "../data/skills";
 import { getRecipeOutput } from "../data/recipes";
-import type { SkillMeta } from "../shared/types";
+import type { SkillMeta, SkillQuality } from "../shared/types";
 import { equippedTags, hasSkill, type RunState } from "./state";
 
 /** 普通战金币 20-30（卡牌不再由战斗掉落，金币为主要产出）。 */
@@ -24,29 +24,55 @@ export function availableSkillPool(state: RunState): SkillMeta[] {
 	return ALL_GENERAL_SKILLS.filter(skill => !isSkillBlacklisted(skill.id) && !hasSkill(state, skill.id));
 }
 
+export interface SkillOfferOptions {
+	count?: number;
+	/** 品质抽取权重；未提供的品质按 1 计。 */
+	weights?: Partial<Record<SkillQuality, number>>;
+}
+
 /**
- * 战后三选一：70% 匹配已有标签、30% 跨流派随机（概要设计 §5.2）。
+ * 战后三选一：按品质权重抽取（前期普通、精英稀有、Boss 传奇），
+ * 每个槽位内再按 70% 匹配已有标签 / 30% 跨流派随机（概要设计 §5.2）。
  */
-export function rollSkillOffers(state: RunState, rng: Rng, count = 3): SkillMeta[] {
+export function rollSkillOffers(state: RunState, rng: Rng, options: SkillOfferOptions = {}): SkillMeta[] {
+	const count = options.count ?? 3;
 	const pool = availableSkillPool(state);
 	if (pool.length <= count) return [...pool].sort((a, b) => a.id.localeCompare(b.id));
 	const owned = new Set(equippedTags(state, id => getSkillMeta(id) ?? getRecipeOutput(id)));
-	const matched = pool.filter(skill => skill.tags.some(tag => owned.has(tag)));
+	const remaining = [...pool];
 	const offers: SkillMeta[] = [];
-	const matchedPool = [...matched];
-	const globalPool = [...pool];
-	for (let i = 0; i < count; i++) {
-		const useMatched = owned.size > 0 && matchedPool.length > 0 && rng.next() < 0.7;
-		const source = useMatched ? matchedPool : globalPool;
-		if (!source.length) break;
-		const picked = source.splice(rng.int(source.length), 1)[0];
+	while (offers.length < count && remaining.length) {
+		const quality = pickQuality(remaining, options.weights, rng);
+		const qualityPool = remaining.filter(skill => skill.quality === quality);
+		const source = qualityPool.length ? qualityPool : remaining;
+		const matched = source.filter(skill => skill.tags.some(tag => owned.has(tag)));
+		const useMatched = owned.size > 0 && matched.length > 0 && rng.next() < 0.7;
+		const candidates = useMatched ? matched : source;
+		const picked = candidates[rng.int(candidates.length)];
 		offers.push(picked);
-		const globalIndex = globalPool.indexOf(picked);
-		if (globalIndex !== -1) globalPool.splice(globalIndex, 1);
-		const matchedIndex = matchedPool.indexOf(picked);
-		if (matchedIndex !== -1) matchedPool.splice(matchedIndex, 1);
+		remaining.splice(remaining.indexOf(picked), 1);
 	}
 	return offers;
+}
+
+function pickQuality(pool: readonly SkillMeta[], weights: Partial<Record<SkillQuality, number>> | undefined, rng: Rng): SkillQuality {
+	const qualities = [...new Set(pool.map(skill => skill.quality))];
+	const weightOf = (quality: SkillQuality) => weights?.[quality] ?? 1;
+	const total = qualities.reduce((sum, quality) => sum + weightOf(quality), 0);
+	if (total <= 0) return qualities[0];
+	let roll = rng.next() * total;
+	for (const quality of qualities) {
+		roll -= weightOf(quality);
+		if (roll < 0) return quality;
+	}
+	return qualities[qualities.length - 1];
+}
+
+/** 按节点类型与章节给出技能品质权重。 */
+export function battleOfferWeights(nodeType: string, chapter: number): Partial<Record<SkillQuality, number>> {
+	if (nodeType === "boss") return { common: 0.2, rare: 2, legendary: 8 };
+	if (nodeType === "elite") return { common: 1, rare: 6, legendary: 3 };
+	return chapter >= 2 ? { common: 4, rare: 5, legendary: 1 } : { common: 7, rare: 3, legendary: 0.5 };
 }
 
 /** 商店技能标价：主动 100-150、被动 120-180（概要设计 §7.3）。 */

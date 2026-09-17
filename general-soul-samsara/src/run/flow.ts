@@ -12,7 +12,7 @@ import type { MapNode } from "./map";
 import { generateChapter } from "./map";
 import { addGold, type RunState } from "./state";
 import { applyEventEffects, rollEvent } from "./events";
-import { pickGrantedSkill, rollBossGold, rollEliteGold, rollGold, rollSkillOffers } from "./rewards";
+import { battleOfferWeights, pickGrantedSkill, rollBossGold, rollEliteGold, rollGold, rollSkillOffers } from "./rewards";
 import { clearRun, saveRun } from "./save";
 
 /** 原型共两章（需求规格 §2.1）。 */
@@ -107,7 +107,7 @@ async function resolveNode(
 				const treasure = rollTreasure(rng, state.treasures, qualities);
 				if (treasure) await meta.offerTreasure(treasure, state);
 			}
-			await meta.offerReward(rollSkillOffers(state, rng), gold, state);
+			await meta.offerReward(rollSkillOffers(state, rng, { weights: battleOfferWeights(node.type, state.chapter) }), gold, state);
 			return "victory";
 		}
 	}
