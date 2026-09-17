@@ -7,7 +7,7 @@ import type { EventOption, RunEventDef } from "../run/events";
 import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, slotList, upgradeCardAt, upgradeSkillAt, MAX_SKILL_LEVEL, type RunCard, type RunState } from "../run/state";
 import { availableRecipes, applyRecipe } from "../run/craft";
 import type { RecipeDef } from "../data/recipes";
-import { availableSkillPool, cardPrice, removeCardPrice, rollShopCards, skillPrice } from "../run/rewards";
+import { availableSkillPool, cardKindLabel, cardPrice, removeCardPrice, rollShopCards, skillPrice } from "../run/rewards";
 import { QUALITY_LABELS, getTreasure, rollTreasure, treasurePrice, type TreasureDef } from "../data/treasures";
 import { isUpgradable, upgradeEffect } from "../data/upgrades";
 
@@ -393,7 +393,7 @@ function renderView(current: View): VNode {
 						return h(
 							"div",
 							{ class: ["rogue-card", disabled ? "rogue-disabled" : ""], onClick: disabled ? undefined : () => buyCard(current, id, price) },
-							[h("div", { class: "rogue-card-name" }, cardName(id)), h("div", { class: "rogue-card-kind" }, `卡牌 · ${price} 金币`)]
+							[h("div", { class: "rogue-card-name" }, cardName(id)), h("div", { class: "rogue-card-kind" }, `${cardKindLabel(id)} · ${price} 金币`)]
 						);
 					})
 				),

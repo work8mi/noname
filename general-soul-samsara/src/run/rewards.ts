@@ -54,27 +54,76 @@ export function skillPrice(skill: SkillMeta, rng: Rng): number {
 	return skill.kind === "active" ? 100 + rng.int(51) : 120 + rng.int(61);
 }
 
-/** 商店可售卡牌与价格（原型子集，§6.2 与 §7.3）。 */
-const SHOP_CARD_PRICES: Readonly<Record<string, number>> = {
-	sha: 50,
-	shan: 50,
-	tao: 60,
-	jiu: 50,
-	wuzhong: 80,
-	guohe: 80,
-	shunshou: 80,
-	juedou: 80,
-	nanman: 120,
-	wanjian: 120,
-};
+/** 商店可售卡牌与价格（概要设计 §6.2 / §7.3）。 */
+export type ShopCardKind = "basic" | "trick" | "special" | "weapon" | "armor";
 
-export function cardPrice(id: string): number {
-	return SHOP_CARD_PRICES[id] ?? 80;
+export interface ShopCardDef {
+	id: string;
+	kind: ShopCardKind;
+	price: number;
 }
 
-/** 随机 3 张商店卡牌；不重复。 */
-export function rollShopCards(rng: Rng, count = 3): string[] {
-	const pool = Object.keys(SHOP_CARD_PRICES);
+export const CARD_KIND_LABELS: Record<ShopCardKind, string> = {
+	basic: "基本牌",
+	trick: "锦囊",
+	special: "特殊锦囊",
+	weapon: "武器",
+	armor: "防具",
+};
+
+/**
+ * 原型商店卡池：基本牌 / 基础锦囊 / 特殊锦囊 / 武器 / 防具。
+ *
+ * 坐骑与宝物类装备卡按需求规格 §2.2 留到原型后接入。
+ * 特殊锦囊与部分装备来自 extra 卡包（默认启用）。
+ */
+export const SHOP_CARDS: readonly ShopCardDef[] = [
+	{ id: "sha", kind: "basic", price: 50 },
+	{ id: "shan", kind: "basic", price: 50 },
+	{ id: "tao", kind: "basic", price: 60 },
+	{ id: "jiu", kind: "basic", price: 50 },
+	{ id: "wuzhong", kind: "trick", price: 80 },
+	{ id: "guohe", kind: "trick", price: 80 },
+	{ id: "shunshou", kind: "trick", price: 80 },
+	{ id: "juedou", kind: "trick", price: 80 },
+	{ id: "nanman", kind: "trick", price: 120 },
+	{ id: "wanjian", kind: "trick", price: 120 },
+	{ id: "taoyuan", kind: "special", price: 150 },
+	{ id: "wugu", kind: "special", price: 130 },
+	{ id: "huogong", kind: "special", price: 120 },
+	{ id: "tiesuo", kind: "special", price: 120 },
+	{ id: "zhuge", kind: "weapon", price: 150 },
+	{ id: "qinggang", kind: "weapon", price: 130 },
+	{ id: "cixiong", kind: "weapon", price: 130 },
+	{ id: "zhangba", kind: "weapon", price: 130 },
+	{ id: "guanshi", kind: "weapon", price: 120 },
+	{ id: "qilin", kind: "weapon", price: 130 },
+	{ id: "hanbing", kind: "weapon", price: 120 },
+	{ id: "zhuque", kind: "weapon", price: 130 },
+	{ id: "guding", kind: "weapon", price: 120 },
+	{ id: "bagua", kind: "armor", price: 120 },
+	{ id: "renwang", kind: "armor", price: 120 },
+	{ id: "tengjia", kind: "armor", price: 110 },
+	{ id: "baiyin", kind: "armor", price: 130 },
+];
+
+export function getShopCard(id: string): ShopCardDef | undefined {
+	return SHOP_CARDS.find(card => card.id === id);
+}
+
+export function cardPrice(id: string): number {
+	return getShopCard(id)?.price ?? 80;
+}
+
+/** 商店卡牌的类型标签；未知卡牌回退为"卡牌"。 */
+export function cardKindLabel(id: string): string {
+	const card = getShopCard(id);
+	return card ? CARD_KIND_LABELS[card.kind] : "卡牌";
+}
+
+/** 随机抽取商店卡牌（默认 5 张，不重复）。 */
+export function rollShopCards(rng: Rng, count = 5): string[] {
+	const pool = SHOP_CARDS.map(card => card.id);
 	const result: string[] = [];
 	while (result.length < count && pool.length) {
 		result.push(pool.splice(rng.int(pool.length), 1)[0]);
