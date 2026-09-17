@@ -46,6 +46,7 @@ export default function () {
 			let runtime: BattleRuntime | undefined;
 			const debug: DebugHandle = {
 				state,
+				meta,
 				getRuntime: () => runtime,
 				setRuntime: value => {
 					runtime = value;

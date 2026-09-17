@@ -5,6 +5,8 @@ export interface Intent {
 	type: IntentType;
 	/** 攻击类意图的伤害参数（例如蓄力后的加值）。 */
 	value?: number;
+	/** 召唤类意图要生成的敌人。 */
+	summon?: EnemyDef;
 }
 
 export interface IntentContext {
@@ -20,6 +22,8 @@ export interface IntentEntry {
 	/** 仅当条件满足时参与抽取。 */
 	when?: (context: IntentContext) => boolean;
 	value?: number;
+	/** 召唤类意图的目标配置。 */
+	summon?: EnemyDef;
 }
 
 /** 敌人词缀。 */
@@ -34,6 +38,18 @@ export interface EnemyDef {
 	intents: IntentEntry[];
 	/** 敌方牌表（卡牌 id 列表，抽空后重洗）。 */
 	deck: string[];
+	/** 多阶段首领：体力比例跌破阈值时切换意图并获得强化。 */
+	phases?: EnemyPhase[];
+}
+
+export interface EnemyPhase {
+	/** 阶段展示名（切换时弹出）。 */
+	label: string;
+	/** 当前体力比例 ≤ 该值时进入此阶段。 */
+	threshold: number;
+	intents: IntentEntry[];
+	/** 进入阶段后攻击的额外伤害。 */
+	damageBonus?: number;
 }
 
 export type SkillQuality = "common" | "rare" | "legendary";

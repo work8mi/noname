@@ -1,7 +1,8 @@
 import { game, ui } from "noname";
 import { createRng } from "../shared/rng";
-import type { EnemyDef } from "../shared/types";
-import { MOB_DEFS } from "../data/enemies";
+import type { TreasureQuality } from "../data/treasures";
+import { rollTreasure } from "../data/treasures";
+import { getChapterBoss } from "../data/enemies";
 import { rollEncounter } from "../mode/encounters";
 import type { BattleRuntime } from "../battle/engine/setup";
 import { setupBattle } from "../battle/engine/setup";
@@ -11,12 +12,15 @@ import type { MapNode } from "./map";
 import { generateChapter } from "./map";
 import { addGold, type RunState } from "./state";
 import { applyEventEffects, rollEvent } from "./events";
-import { pickGrantedSkill, rollEliteGold, rollGold, rollSkillOffers } from "./rewards";
-import { rollTreasure } from "../data/treasures";
+import { pickGrantedSkill, rollBossGold, rollEliteGold, rollGold, rollSkillOffers } from "./rewards";
 import { clearRun, saveRun } from "./save";
+
+/** 原型共两章（需求规格 §2.1）。 */
+export const MAX_CHAPTER = 2;
 
 export interface DebugHandle {
 	state: RunState;
+	meta: MetaUI;
 	getRuntime: () => BattleRuntime | undefined;
 	setRuntime: (runtime: BattleRuntime | undefined) => void;
 	/** 调试用：直接把当前战斗判定为胜利/失败（在下一次行动结束后生效）。 */
@@ -24,20 +28,28 @@ export interface DebugHandle {
 }
 
 /**
- * 单局主循环：地图选点 → 节点结算（战斗/商店/休整/事件）→ 下一层。
+ * 单局主循环：地图选点 → 节点结算（战斗/商店/休整/事件）→ 下一层 → 下一章。
  *
  * 所有随机都从节点派生的确定性种子产生，便于复盘与存档恢复。
  */
 export async function runFlow(event: any, meta: MetaUI, state: RunState, debug: DebugHandle): Promise<void> {
 	saveRun(state);
-	const map = generateChapter(state.seed, state.chapter);
+	let map = generateChapter(state.seed, state.chapter);
 	while (true) {
 		const node = await meta.chooseNode(map, state);
 		const nodeRng = createRng(`${state.seed}-${node.id}-${state.battleCount}`);
 		const outcome = await resolveNode(event, meta, state, node, nodeRng, debug);
 		saveRun(state);
 		if (outcome === "defeat") break;
-		if (node.layer >= map.layers.length - 1) break;
+		if (node.layer >= map.layers.length - 1) {
+			if (state.chapter >= MAX_CHAPTER) break;
+			await meta.showChapterClear(state.chapter, state);
+			state.chapter++;
+			state.layer = 0;
+			map = generateChapter(state.seed, state.chapter);
+			saveRun(state);
+			continue;
+		}
 		state.layer = node.layer + 1;
 	}
 	clearRun();
@@ -86,10 +98,12 @@ async function resolveNode(
 			const result = await runBattle(event, meta, state, node, rng, debug);
 			state.battleCount++;
 			if (result === "defeat") return "defeat";
-			const gold = node.type === "elite" ? rollEliteGold(rng) : rollGold(rng);
+			const isBoss = node.type === "boss";
+			const gold = isBoss ? rollBossGold(rng) : node.type === "elite" ? rollEliteGold(rng) : rollGold(rng);
 			addGold(state, gold);
-			if (node.type === "elite") {
-				const treasure = rollTreasure(rng, state.treasures, ["common", "rare", "legendary"]);
+			if (node.type === "elite" || isBoss) {
+				const qualities: TreasureQuality[] = isBoss ? ["rare", "legendary", "gamechanger"] : ["common", "rare", "legendary"];
+				const treasure = rollTreasure(rng, state.treasures, qualities);
 				if (treasure) await meta.offerTreasure(treasure, state);
 			}
 			await meta.offerReward(rollSkillOffers(state, rng), gold, state);
@@ -106,7 +120,8 @@ export async function runBattle(
 	rng: ReturnType<typeof createRng>,
 	debug: DebugHandle
 ): Promise<"victory" | "defeat"> {
-	const baseEnemies = node.type === "elite" ? eliteEncounter() : rollEncounter(rng);
+	const baseEnemies =
+		node.type === "elite" || node.type === "boss" ? [getChapterBoss(state.chapter)] : rollEncounter(rng, state.chapter);
 	const bonusHp = state.nextBattleEnemyHp;
 	if (bonusHp > 0) state.nextBattleEnemyHp = 0;
 	const enemies = bonusHp > 0 ? baseEnemies.map(enemy => ({ ...enemy, hp: enemy.hp + bonusHp })) : baseEnemies;
@@ -128,9 +143,4 @@ export async function runBattle(
 	ui.arena.style.display = "none";
 	meta.setVisible(true);
 	return result;
-}
-
-/** 精英战：M0.3 接入华雄前先用两位小兵的组合。 */
-function eliteEncounter(): EnemyDef[] {
-	return [MOB_DEFS[1], MOB_DEFS[4]];
 }

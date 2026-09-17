@@ -14,6 +14,11 @@ export function rollEliteGold(rng: Rng): number {
 	return 40 + rng.int(21);
 }
 
+/** 首领战金币 80-120（概要设计 §7.1）。 */
+export function rollBossGold(rng: Rng): number {
+	return 80 + rng.int(41);
+}
+
 export function availableSkillPool(state: RunState): SkillMeta[] {
 	return ALL_GENERAL_SKILLS.filter(skill => !isSkillBlacklisted(skill.id) && !hasSkill(state, skill.id));
 }

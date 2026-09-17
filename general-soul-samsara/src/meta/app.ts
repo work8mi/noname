@@ -18,8 +18,11 @@ export interface MetaUI {
 	promptRemoveCard(state: RunState, title: string): Promise<boolean>;
 	openShop(state: RunState, rng: Rng): Promise<void>;
 	openRest(state: RunState): Promise<void>;
+	showChapterClear(chapter: number, state: RunState): Promise<void>;
 	showRunResult(result: "victory" | "defeat", state: RunState): Promise<void>;
 	setVisible(visible: boolean): void;
+	/** 调试用：按当前 view 状态强制重绘（状态被外部修改后）。 */
+	refresh(): void;
 	dispose(): void;
 }
 
@@ -33,6 +36,7 @@ type View =
 	| { kind: "event"; def: RunEventDef; state: RunState; resolve: Resolver<EventOption> }
 	| { kind: "shop"; state: RunState; rng: Rng; resolve: Resolver<void> }
 	| { kind: "rest"; state: RunState; resolve: Resolver<void> }
+	| { kind: "chapter"; chapter: number; state: RunState; resolve: Resolver<void> }
 	| { kind: "result"; result: "victory" | "defeat"; state: RunState; resolve: Resolver<void> };
 
 interface SlotPrompt {
@@ -52,6 +56,8 @@ interface DeckPrompt {
 }
 
 const view = ref<View>({ kind: "start", hasSave: false, resolve: () => {} });
+/** 外部修改状态后的重绘计数（调试/测试用）。 */
+const tick = ref(0);
 const slotPrompt = ref<SlotPrompt | null>(null);
 const deckPrompt = ref<DeckPrompt | null>(null);
 const deckView = ref(false);
@@ -377,6 +383,12 @@ function renderView(current: View): VNode {
 					button("离开", () => current.resolve()),
 				]),
 			]);
+		case "chapter":
+			return h("div", { class: "rogue-panel" }, [
+				h("div", { class: "rogue-title" }, `第 ${current.chapter} 章完成`),
+				h("div", { class: "rogue-stats" }, `体力 ${current.state.hp}/${current.state.maxHp}　金币 ${current.state.gold}　宝物 ${current.state.treasures.length}`),
+				button("进入下一章", () => current.resolve()),
+			]);
 		case "result":
 			return h("div", { class: "rogue-panel" }, [
 				h("div", { class: "rogue-title" }, current.result === "victory" ? "章节通关" : "轮回终结"),
@@ -517,6 +529,7 @@ export function mountMetaUI(): MetaUI {
 	const container = ui.create.div("#rogue-meta", ui.window);
 	const app = createApp({
 		render: () => {
+			void tick.value;
 			if (slotPrompt.value) return renderLayer(renderSlotPrompt(slotPrompt.value));
 			if (deckPrompt.value) return renderLayer(renderDeckPrompt(deckPrompt.value));
 			if (deckView.value) return renderLayer(renderDeckView());
@@ -580,6 +593,11 @@ export function mountMetaUI(): MetaUI {
 				view.value = { kind: "rest", state, resolve };
 			});
 		},
+		showChapterClear(chapter, state) {
+			return new Promise(resolve => {
+				view.value = { kind: "chapter", chapter, state, resolve };
+			});
+		},
 		showRunResult(result, state) {
 			return new Promise(resolve => {
 				view.value = { kind: "result", result, state, resolve };
@@ -587,6 +605,9 @@ export function mountMetaUI(): MetaUI {
 		},
 		setVisible(visible: boolean) {
 			container.style.display = visible ? "" : "none";
+		},
+		refresh() {
+			tick.value++;
 		},
 		dispose() {
 			app.unmount();

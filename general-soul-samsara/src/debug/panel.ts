@@ -5,6 +5,7 @@ import { injectStyles } from "../battle/engine/ui";
 import { addCard, addGold, addTreasure, equipSkill, heal, upgradeCardAt } from "../run/state";
 import { getTreasure } from "../data/treasures";
 import { clearRun } from "../run/save";
+import { LAYER_COUNT } from "../run/map";
 import { SEED_KEY } from "../shared/constants";
 import type { DebugHandle } from "../run/flow";
 
@@ -43,6 +44,10 @@ export function installDebugPanel(debug: DebugHandle): void {
 	});
 	addAction(panel, "获得一张毒", () => {
 		addCard(debug.state, "rogue_curse_du");
+	});
+	addAction(panel, "跳到章尾", () => {
+		debug.state.layer = LAYER_COUNT - 1;
+		debug.meta.refresh();
 	});
 	addAction(panel, "直接胜利", () => {
 		debug.forceResult("victory");
