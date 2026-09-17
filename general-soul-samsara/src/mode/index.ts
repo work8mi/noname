@@ -14,6 +14,7 @@ import { rogue_upgrade_rules } from "./upgrades";
 import { CURSE_CARDS, CURSE_TRANSLATE, rogue_curse_rules } from "./curses";
 import { RECIPE_SKILLS } from "./recipes";
 import { LEVEL_SKILL_DEFS } from "./level-effects";
+import { rogue_seal_rule } from "./seal";
 import { RECIPE_TRANSLATE } from "../data/recipes";
 
 export const type = "mode";
@@ -31,6 +32,7 @@ export default function () {
 			rogue_kuangbao,
 			rogue_upgrade_rules,
 			rogue_curse_rules,
+			rogue_seal_rule,
 			...TREASURE_SKILLS,
 			...RECIPE_SKILLS,
 			...LEVEL_SKILL_DEFS,

@@ -91,4 +91,6 @@ export interface BattlePlan {
 	treasures: string[];
 	/** 通用槽内的技能（含融合/进化产物与等级），开战时安装到玩家身上。 */
 	skills: SkillSlotPlan[];
+	/** 主动槽技能 id（供敌人「封印」意图选取目标）。 */
+	activeSkills: string[];
 }

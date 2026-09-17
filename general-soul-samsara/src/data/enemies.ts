@@ -74,9 +74,10 @@ export const MOB_DEFS: readonly EnemyDef[] = [
 		hp: 3,
 		affixes: ["yaoshu"],
 		intents: [
-			{ type: "attack", weight: 40 },
-			{ type: "charge", weight: 30 },
-			{ type: "defend", weight: 30 },
+			{ type: "attack", weight: 30 },
+			{ type: "charge", weight: 25 },
+			{ type: "defend", weight: 20 },
+			{ type: "seal", weight: 25 },
 		],
 		deck: expandDeck([
 			{ name: "sha", count: 2 },

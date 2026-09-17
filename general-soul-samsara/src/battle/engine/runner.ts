@@ -96,8 +96,22 @@ export async function runIntent(enemy: any, intent: Intent, runtime?: BattleRunt
 			await game.me.damage({ source: enemy, num: (bool ? 2 : 1) + bonus, nature: "thunder" });
 			break;
 		}
+		case "seal": {
+			const actives: string[] = game.me.storage?.rogueActiveSkills ?? [];
+			const sealed: string | undefined = game.me.storage?.rogueSealedSkill;
+			const candidates = actives.filter(id => game.me.hasSkill(id) && id !== sealed);
+			if (candidates.length && rng) {
+				const skillId = candidates[rng.int(candidates.length)];
+				game.me.removeSkill(skillId);
+				game.me.storage.rogueSealedSkill = skillId;
+				game.me.popup("封印");
+			} else {
+				await enemy.draw({ num: 1 });
+			}
+			break;
+		}
 		default: {
-			// seal 尚未接入，临时按普通攻击处理。
+			// 其余意图暂未使用，保底按普通攻击处理。
 			if (enemy.canUse(attackCard(), game.me)) await enemy.useCard(attackCard(), game.me);
 			break;
 		}
