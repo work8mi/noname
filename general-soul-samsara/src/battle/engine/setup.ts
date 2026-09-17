@@ -51,6 +51,7 @@ export async function setupBattle(plan: BattlePlan, rng: Rng, hp?: number): Prom
 	}
 	installPile(me, plan.playerDeck, rng);
 	me.addSkill("rogue_rule_draw");
+	me.addSkill("rogue_upgrade_rules");
 	for (const treasureId of plan.treasures) {
 		const treasure = getTreasure(treasureId);
 		if (treasure?.skillId) me.addSkill(treasure.skillId);
@@ -69,7 +70,7 @@ export async function setupBattle(plan: BattlePlan, rng: Rng, hp?: number): Prom
 			const skill = AFFIX_SKILLS[affix];
 			if (skill) enemy.addSkill(skill);
 		}
-		installPile(enemy, def.deck, rng);
+		installPile(enemy, def.deck.map(name => ({ name })), rng);
 		createIntentBadge(enemy);
 		enemies.push(enemy);
 	}

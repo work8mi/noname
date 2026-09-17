@@ -1,5 +1,6 @@
 import { game, ui } from "noname";
 import type { Rng } from "../../shared/rng";
+import type { DeckEntry } from "../../shared/types";
 import { createPile, drawFromPile, type Pile } from "../piles";
 
 /**
@@ -35,8 +36,13 @@ export function reclaimOwnDiscards(player: any): void {
  * 引擎的 `draw` / `gameDraw` 会优先调用 `player.getTopCards`，因此个人牌堆
  * 天然覆盖摸牌与初始手牌，且永不触发全局疲劳。
  */
-export function installPile(player: any, cardIds: readonly string[], rng: Rng): Pile<any> {
-	const cards = cardIds.map(name => game.createCard({ name }));
+export function installPile(player: any, entries: readonly DeckEntry[], rng: Rng): Pile<any> {
+	const cards = entries.map(entry => {
+		const card = game.createCard({ name: entry.name });
+		card.storage ??= {};
+		card.storage.rogueUpgraded = Boolean(entry.upgraded);
+		return card;
+	});
 	for (const card of cards) stampOwner(card, player);
 	const pile = createPile(cards, rng);
 	player.storage ??= {};

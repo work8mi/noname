@@ -131,6 +131,14 @@ export function removeCardAt(state: RunState, index: number): RunCard | undefine
 	return state.deck.splice(index, 1)[0];
 }
 
+/** 升级一张牌（永久、每张牌独立）；已升级或越界返回 false。 */
+export function upgradeCardAt(state: RunState, index: number): boolean {
+	const card = state.deck[index];
+	if (!card || card.upgraded) return false;
+	card.upgraded = true;
+	return true;
+}
+
 export function countCard(state: RunState, id: string): number {
 	return state.deck.filter(card => card.id === id).length;
 }

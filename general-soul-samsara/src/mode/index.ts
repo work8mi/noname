@@ -10,6 +10,7 @@ import { installDebugPanel } from "../debug/panel";
 import type { BattleRuntime } from "../battle/engine/setup";
 import { rogue_kuangbao, rogue_tiejia } from "./skills";
 import { TREASURE_SKILLS } from "./treasures";
+import { rogue_upgrade_rules } from "./upgrades";
 
 export const type = "mode";
 
@@ -19,6 +20,7 @@ export default function () {
 		skill: {
 			rogue_tiejia,
 			rogue_kuangbao,
+			rogue_upgrade_rules,
 			...TREASURE_SKILLS,
 		},
 		game: {

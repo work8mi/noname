@@ -108,7 +108,7 @@ export async function runBattle(
 	const enemies = bonusHp > 0 ? baseEnemies.map(enemy => ({ ...enemy, hp: enemy.hp + bonusHp })) : baseEnemies;
 	const plan = {
 		playerCharacter: state.character,
-		playerDeck: state.deck.map(card => card.id),
+		playerDeck: state.deck.map(card => ({ name: card.id, upgraded: card.upgraded })),
 		enemies,
 		seed: `${state.seed}-${node.id}`,
 		treasures: [...state.treasures],

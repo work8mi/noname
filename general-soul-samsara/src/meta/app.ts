@@ -4,9 +4,10 @@ import type { Rng } from "../shared/rng";
 import type { SkillMeta } from "../shared/types";
 import { NODE_LABELS, type ChapterMap, type MapNode } from "../run/map";
 import type { EventOption, RunEventDef } from "../run/events";
-import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, type RunState } from "../run/state";
+import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, upgradeCardAt, type RunCard, type RunState } from "../run/state";
 import { availableSkillPool, cardPrice, removeCardPrice, rollShopCards, skillPrice } from "../run/rewards";
 import { QUALITY_LABELS, getTreasure, rollTreasure, treasurePrice, type TreasureDef } from "../data/treasures";
+import { isUpgradable, upgradeEffect } from "../data/upgrades";
 
 export interface MetaUI {
 	start(hasSave: boolean): Promise<"new" | "continue">;
@@ -42,6 +43,10 @@ interface SlotPrompt {
 
 interface DeckPrompt {
 	title: string;
+	/** true 时为升级选择器，否则为删除选择器。 */
+	upgrade?: boolean;
+	/** 不可选的牌（升级选择器用于过滤已升级或不可升级的牌）。 */
+	filter?: (card: RunCard, index: number) => boolean;
 	complete: (index: number) => void;
 	cancel: () => void;
 }
@@ -55,6 +60,9 @@ const treasureView = ref(false);
 const shopOffers = ref<Array<{ skill: SkillMeta; price: number }>>([]);
 const shopCards = ref<string[]>([]);
 const shopTreasure = ref<{ treasure: TreasureDef; price: number } | null>(null);
+
+/** 商店卡牌升级服务价格。 */
+const UPGRADE_PRICE = 75;
 
 function cardName(id: string): string {
 	return (lib.translate as Record<string, string>)[id] ?? id;
@@ -111,9 +119,18 @@ function renderDeckPrompt(prompt: DeckPrompt): VNode {
 		h(
 			"div",
 			{ class: "rogue-card-row" },
-			state.deck.map((card, index) =>
-				h("div", { class: "rogue-card", onClick: () => prompt.complete(index) }, cardName(card.id))
-			)
+			state.deck.map((card, index) => {
+				const disabled = Boolean(prompt.filter && !prompt.filter(card, index));
+				const label = `${cardName(card.id)}${card.upgraded ? "+" : ""}`;
+				return h(
+					"div",
+					{ class: ["rogue-card", disabled ? "rogue-disabled" : ""], onClick: disabled ? undefined : () => prompt.complete(index) },
+					[
+						h("div", { class: "rogue-card-name" }, label),
+						prompt.upgrade && !card.upgraded && isUpgradable(card.id) ? h("div", { class: "rogue-card-tags" }, upgradeEffect(card.id)) : null,
+					]
+				);
+			})
 		),
 		button("返回", () => prompt.cancel()),
 	]);
@@ -122,16 +139,24 @@ function renderDeckPrompt(prompt: DeckPrompt): VNode {
 function renderDeckView(): VNode {
 	const state = currentState();
 	if (!state) return h("div");
-	const counts = new Map<string, number>();
-	for (const card of state.deck) counts.set(card.id, (counts.get(card.id) ?? 0) + 1);
+	const groups = new Map<string, { card: RunCard; count: number }>();
+	for (const card of state.deck) {
+		const key = `${card.id}${card.upgraded ? "+" : ""}`;
+		const entry = groups.get(key);
+		if (entry) entry.count++;
+		else groups.set(key, { card, count: 1 });
+	}
 	return h("div", { class: "rogue-panel" }, [
 		h("div", { class: "rogue-title" }, "牌组"),
 		h("div", { class: "rogue-stats" }, `共 ${state.deck.length} 张`),
 		h(
 			"div",
 			{ class: "rogue-card-row" },
-			[...counts.entries()].map(([id, count]) =>
-				h("div", { class: "rogue-card" }, [h("div", { class: "rogue-card-name" }, cardName(id)), h("div", { class: "rogue-card-kind" }, `x${count}`)])
+			[...groups.values()].map(({ card, count }) =>
+				h("div", { class: "rogue-card" }, [
+					h("div", { class: "rogue-card-name" }, `${cardName(card.id)}${card.upgraded ? "+" : ""}`),
+					h("div", { class: "rogue-card-kind" }, `x${count}`),
+				])
 			)
 		),
 		button("返回", () => {
@@ -334,6 +359,7 @@ function renderView(current: View): VNode {
 						() => buyRemove(current),
 						current.state.gold < removeCardPrice(current.state) || current.state.deck.length <= 1
 					),
+					button("升级（75 金币）", () => buyUpgrade(current), current.state.gold < UPGRADE_PRICE || !hasUpgradable(current.state)),
 					button("刷新（25 金币）", () => refreshShop(current), current.state.gold < 25),
 					button("离开", () => current.resolve()),
 				]),
@@ -347,7 +373,7 @@ function renderView(current: View): VNode {
 						heal(current.state, 2);
 						current.resolve();
 					}),
-					button("删除一张牌", () => promptDelete(current.state, () => current.resolve())),
+					button("升级一张牌", () => promptUpgrade(current.state, () => current.resolve()), !hasUpgradable(current.state)),
 					button("离开", () => current.resolve()),
 				]),
 			]);
@@ -423,6 +449,11 @@ function buyRemove(current: Extract<View, { kind: "shop" }>): void {
 	promptDelete(current.state, () => addGold(current.state, -price));
 }
 
+function buyUpgrade(current: Extract<View, { kind: "shop" }>): void {
+	if (current.state.gold < UPGRADE_PRICE || !hasUpgradable(current.state)) return;
+	promptUpgrade(current.state, () => addGold(current.state, -UPGRADE_PRICE));
+}
+
 function promptDelete(state: RunState, onDone: () => void): void {
 	deckPrompt.value = {
 		title: "选择要删除的牌",
@@ -435,6 +466,27 @@ function promptDelete(state: RunState, onDone: () => void): void {
 			deckPrompt.value = null;
 		},
 	};
+}
+
+/** 卡牌升级服务：休整免费、商店收费。 */
+function promptUpgrade(state: RunState, onDone: () => void): void {
+	deckPrompt.value = {
+		title: "选择要升级的牌",
+		upgrade: true,
+		filter: card => isUpgradable(card.id) && !card.upgraded,
+		complete: index => {
+			upgradeCardAt(state, index);
+			deckPrompt.value = null;
+			onDone();
+		},
+		cancel: () => {
+			deckPrompt.value = null;
+		},
+	};
+}
+
+function hasUpgradable(state: RunState): boolean {
+	return state.deck.some(card => isUpgradable(card.id) && !card.upgraded);
 }
 
 function refreshShop(current: Extract<View, { kind: "shop" }>): void {

@@ -53,10 +53,16 @@ export interface DeckCard {
 	count: number;
 }
 
+/** 单局牌组里的一张牌。 */
+export interface DeckEntry {
+	name: string;
+	upgraded?: boolean;
+}
+
 /** 一场战斗的配置。 */
 export interface BattlePlan {
 	playerCharacter: string;
-	playerDeck: string[];
+	playerDeck: DeckEntry[];
 	enemies: EnemyDef[];
 	seed: string;
 	/** 本场战斗生效的宝物（引擎技能在开战时安装）。 */
