@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../../src/shared/rng";
-import { availableSkillPool, MAX_SALES_PER_CHAPTER, removeCardPrice, rollBossGold, rollEliteGold, rollGold, rollSkillOffers, salesLeft, sellPrice, skillPrice } from "../../src/run/rewards";
+import { availableSkillPool, battleOfferWeights, MAX_SALES_PER_CHAPTER, removeCardPrice, rollBossGold, rollEliteGold, rollGold, rollSkillOffers, salesLeft, sellPrice, skillPrice } from "../../src/run/rewards";
 import { createRunState, equipSkill } from "../../src/run/state";
 import { getSkillMeta } from "../../src/data/skills";
 
@@ -29,6 +29,30 @@ describe("奖励与经济", () => {
 			expect(offers).toHaveLength(3);
 			expect(new Set(offers.map(skill => skill.id)).size).toBe(3);
 			expect(offers.some(skill => skill.id === "wusheng")).toBe(false);
+		}
+	});
+
+	it("品质权重生效：Boss 权重偏传奇、精英偏好稀有", () => {
+		const state = createRunState("seed");
+		const bossWeights = battleOfferWeights("boss", 2);
+		const eliteWeights = battleOfferWeights("elite", 2);
+		let bossLegendary = 0;
+		let eliteRare = 0;
+		for (let i = 0; i < 300; i++) {
+			const offers = rollSkillOffers(state, createRng(`q-${i}`), { weights: bossWeights });
+			bossLegendary += offers.filter(skill => skill.quality === "legendary").length;
+			const eliteOffers = rollSkillOffers(state, createRng(`e-${i}`), { weights: eliteWeights });
+			eliteRare += eliteOffers.filter(skill => skill.quality !== "common").length;
+		}
+		expect(bossLegendary).toBeGreaterThan(300);
+		expect(eliteRare).toBeGreaterThan(600);
+	});
+
+	it("品质池耗尽时回退到其他品质", () => {
+		const state = createRunState("seed");
+		for (let i = 0; i < 20; i++) {
+			const offers = rollSkillOffers(state, createRng(`fb-${i}`), { weights: { legendary: 100 } });
+			expect(offers).toHaveLength(3);
 		}
 	});
 
