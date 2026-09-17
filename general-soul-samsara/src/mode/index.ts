@@ -11,16 +11,20 @@ import type { BattleRuntime } from "../battle/engine/setup";
 import { rogue_kuangbao, rogue_tiejia } from "./skills";
 import { TREASURE_SKILLS } from "./treasures";
 import { rogue_upgrade_rules } from "./upgrades";
+import { CURSE_CARDS, CURSE_TRANSLATE, rogue_curse_rules } from "./curses";
 
 export const type = "mode";
 
 export default function () {
 	return {
 		name: "general-soul-samsara",
+		card: CURSE_CARDS,
+		translate: CURSE_TRANSLATE,
 		skill: {
 			rogue_tiejia,
 			rogue_kuangbao,
 			rogue_upgrade_rules,
+			rogue_curse_rules,
 			...TREASURE_SKILLS,
 		},
 		game: {

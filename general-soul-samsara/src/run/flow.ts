@@ -75,6 +75,10 @@ async function resolveNode(
 			const granted = pickGrantedSkill(state, rng, pending.skillId, pending.skillKind);
 			if (granted) await meta.offerReward([granted], 0, state);
 			else if (pending.skillId || pending.skillKind) addGold(state, 40);
+			for (let i = 0; i < pending.treasures; i++) {
+				const treasure = rollTreasure(rng, state.treasures, ["common", "rare", "legendary"]);
+				if (treasure) await meta.offerTreasure(treasure, state);
+			}
 			state.nextBattleEnemyHp += pending.enemyHpBonus;
 			return "skip";
 		}

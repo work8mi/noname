@@ -2,14 +2,16 @@ import type { Rng } from "../shared/rng";
 import { addCard, addGold, damage, heal, type RunState } from "./state";
 
 /** 事件效果类型；即时效果直接结算，其余交给流程层处理。 */
-export type EventEffectKind = "gold" | "heal" | "damage" | "cards" | "remove" | "skill" | "enemy-hp";
+export type EventEffectKind = "gold" | "heal" | "damage" | "cards" | "remove" | "skill" | "enemy-hp" | "curse" | "treasure";
 
 export interface EventEffect {
 	kind: EventEffectKind;
-	/** gold / heal / damage / remove / enemy-hp 的数值。 */
+	/** gold / heal / damage / remove / enemy-hp / treasure 的数值。 */
 	value?: number;
 	/** cards 效果要加入牌组的卡牌 id。 */
 	cards?: string[];
+	/** curse 效果要加入牌组的诅咒牌 id。 */
+	curses?: string[];
 	/** skill 效果的期望类型；未指定 skillId 时按类型随机。 */
 	skillKind?: "active" | "passive";
 	/** skill 效果优先指定的技能 id。 */
@@ -62,7 +64,12 @@ export const EVENTS: readonly RunEventDef[] = [
 				effects: [{ kind: "skill", skillKind: "active" }, { kind: "enemy-hp", value: 1 }],
 			},
 			{ id: "hide", label: "隐藏锋芒", detail: "获得 40 金币", effects: [{ kind: "gold", value: 40 }] },
-			{ id: "cup", label: "摔杯为号", detail: "获得 1 张【决斗】，失去 2 点体力", effects: [{ kind: "cards", cards: ["juedou"] }, { kind: "damage", value: 2 }] },
+			{
+				id: "cup",
+				label: "摔杯为号",
+				detail: "获得一件随机宝物，并加入一张【毒】",
+				effects: [{ kind: "treasure", value: 1 }, { kind: "curse", curses: ["rogue_curse_du"] }],
+			},
 		],
 	},
 	{
@@ -84,7 +91,7 @@ export const EVENTS: readonly RunEventDef[] = [
 		options: [
 			{ id: "release", label: "放走曹操", detail: "获得 80 金币", effects: [{ kind: "gold", value: 80 }] },
 			{ id: "execute", label: "斩杀曹操", detail: "获得 3 张【杀】，失去 5 点体力", effects: [{ kind: "cards", cards: ["sha", "sha", "sha"] }, { kind: "damage", value: 5 }] },
-			{ id: "recruit", label: "劝降", detail: "获得【鬼才】，失去 2 点体力", effects: [{ kind: "skill", skillId: "guicai" }, { kind: "damage", value: 2 }] },
+			{ id: "recruit", label: "劝降", detail: "获得【鬼才】，并加入一张【乐不思蜀】", effects: [{ kind: "skill", skillId: "guicai" }, { kind: "curse", curses: ["rogue_curse_lebu"] }] },
 		],
 	},
 ];
@@ -95,13 +102,15 @@ export interface PendingEventResult {
 	skillId?: string;
 	skillKind?: "active" | "passive";
 	enemyHpBonus: number;
+	/** 需要发放的随机宝物数量。 */
+	treasures: number;
 	/** 指定技能已拥有时补偿的金币。 */
 	goldFallback: number;
 }
 
 /** 结算即时效果，并把需要 UI 的效果汇总给流程层。 */
 export function applyEventEffects(state: RunState, effects: readonly EventEffect[]): PendingEventResult {
-	const pending: PendingEventResult = { removals: 0, enemyHpBonus: 0, goldFallback: 0 };
+	const pending: PendingEventResult = { removals: 0, enemyHpBonus: 0, treasures: 0, goldFallback: 0 };
 	for (const effect of effects) {
 		switch (effect.kind) {
 			case "gold":
@@ -116,12 +125,18 @@ export function applyEventEffects(state: RunState, effects: readonly EventEffect
 			case "cards":
 				for (const id of effect.cards ?? []) addCard(state, id);
 				break;
+			case "curse":
+				for (const id of effect.curses ?? []) addCard(state, id);
+				break;
 			case "remove":
 				pending.removals += effect.value ?? 1;
 				break;
 			case "skill":
 				if (effect.skillId) pending.skillId = effect.skillId;
 				else if (effect.skillKind) pending.skillKind = effect.skillKind;
+				break;
+			case "treasure":
+				pending.treasures += effect.value ?? 1;
 				break;
 			case "enemy-hp":
 				pending.enemyHpBonus += effect.value ?? 0;

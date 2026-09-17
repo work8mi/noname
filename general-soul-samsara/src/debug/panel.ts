@@ -2,7 +2,7 @@
 import { ui } from "noname";
 import { M01_SKILLS } from "../data/skills";
 import { injectStyles } from "../battle/engine/ui";
-import { addGold, addTreasure, equipSkill, heal, upgradeCardAt } from "../run/state";
+import { addCard, addGold, addTreasure, equipSkill, heal, upgradeCardAt } from "../run/state";
 import { getTreasure } from "../data/treasures";
 import { clearRun } from "../run/save";
 import { SEED_KEY } from "../shared/constants";
@@ -40,6 +40,9 @@ export function installDebugPanel(debug: DebugHandle): void {
 	addAction(panel, "升级一张杀", () => {
 		const index = debug.state.deck.findIndex(card => card.id === "sha" && !card.upgraded);
 		if (index >= 0) upgradeCardAt(debug.state, index);
+	});
+	addAction(panel, "获得一张毒", () => {
+		addCard(debug.state, "rogue_curse_du");
 	});
 	addAction(panel, "直接胜利", () => {
 		debug.forceResult("victory");

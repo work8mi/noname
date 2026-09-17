@@ -52,6 +52,7 @@ export async function setupBattle(plan: BattlePlan, rng: Rng, hp?: number): Prom
 	installPile(me, plan.playerDeck, rng);
 	me.addSkill("rogue_rule_draw");
 	me.addSkill("rogue_upgrade_rules");
+	me.addSkill("rogue_curse_rules");
 	for (const treasureId of plan.treasures) {
 		const treasure = getTreasure(treasureId);
 		if (treasure?.skillId) me.addSkill(treasure.skillId);
