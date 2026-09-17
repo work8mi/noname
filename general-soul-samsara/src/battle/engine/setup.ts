@@ -81,6 +81,9 @@ export async function setupBattle(plan: BattlePlan, rng: Rng, hp?: number): Prom
 	me.addSkill("rogue_rule_draw");
 	me.addSkill("rogue_upgrade_rules");
 	me.addSkill("rogue_curse_rules");
+	for (const skillId of plan.skills) {
+		if (skillId) me.addSkill(skillId);
+	}
 	for (const treasureId of plan.treasures) {
 		const treasure = getTreasure(treasureId);
 		if (treasure?.skillId) me.addSkill(treasure.skillId);

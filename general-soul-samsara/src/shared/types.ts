@@ -83,4 +83,6 @@ export interface BattlePlan {
 	seed: string;
 	/** 本场战斗生效的宝物（引擎技能在开战时安装）。 */
 	treasures: string[];
+	/** 通用槽内的技能（含融合/进化产物），开战时安装到玩家身上。 */
+	skills: string[];
 }

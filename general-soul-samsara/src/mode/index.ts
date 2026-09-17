@@ -12,6 +12,8 @@ import { rogue_kuangbao, rogue_tiejia } from "./skills";
 import { TREASURE_SKILLS } from "./treasures";
 import { rogue_upgrade_rules } from "./upgrades";
 import { CURSE_CARDS, CURSE_TRANSLATE, rogue_curse_rules } from "./curses";
+import { RECIPE_SKILLS } from "./recipes";
+import { RECIPE_TRANSLATE } from "../data/recipes";
 
 export const type = "mode";
 
@@ -19,13 +21,17 @@ export default function () {
 	return {
 		name: "general-soul-samsara",
 		card: CURSE_CARDS,
-		translate: CURSE_TRANSLATE,
+		translate: {
+			...CURSE_TRANSLATE,
+			...RECIPE_TRANSLATE,
+		},
 		skill: {
 			rogue_tiejia,
 			rogue_kuangbao,
 			rogue_upgrade_rules,
 			rogue_curse_rules,
 			...TREASURE_SKILLS,
+			...RECIPE_SKILLS,
 		},
 		game: {
 			/** 单场战斗结束由模式接管，屏蔽引擎默认结算与再战按钮。 */

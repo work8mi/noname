@@ -1,6 +1,7 @@
 import type { Rng } from "../shared/rng";
 import { isSkillBlacklisted } from "../data/blacklist";
 import { ALL_GENERAL_SKILLS, getSkillMeta } from "../data/skills";
+import { getRecipeOutput } from "../data/recipes";
 import type { SkillMeta } from "../shared/types";
 import { equippedTags, hasSkill, type RunState } from "./state";
 
@@ -29,7 +30,7 @@ export function availableSkillPool(state: RunState): SkillMeta[] {
 export function rollSkillOffers(state: RunState, rng: Rng, count = 3): SkillMeta[] {
 	const pool = availableSkillPool(state);
 	if (pool.length <= count) return [...pool].sort((a, b) => a.id.localeCompare(b.id));
-	const owned = new Set(equippedTags(state, getSkillMeta));
+	const owned = new Set(equippedTags(state, id => getSkillMeta(id) ?? getRecipeOutput(id)));
 	const matched = pool.filter(skill => skill.tags.some(tag => owned.has(tag)));
 	const offers: SkillMeta[] = [];
 	const matchedPool = [...matched];

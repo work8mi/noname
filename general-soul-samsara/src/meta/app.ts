@@ -4,7 +4,9 @@ import type { Rng } from "../shared/rng";
 import type { SkillMeta } from "../shared/types";
 import { NODE_LABELS, type ChapterMap, type MapNode } from "../run/map";
 import type { EventOption, RunEventDef } from "../run/events";
-import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, upgradeCardAt, type RunCard, type RunState } from "../run/state";
+import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, slotList, upgradeCardAt, upgradeSkillAt, MAX_SKILL_LEVEL, type RunCard, type RunState } from "../run/state";
+import { availableRecipes, applyRecipe } from "../run/craft";
+import type { RecipeDef } from "../data/recipes";
 import { availableSkillPool, cardPrice, removeCardPrice, rollShopCards, skillPrice } from "../run/rewards";
 import { QUALITY_LABELS, getTreasure, rollTreasure, treasurePrice, type TreasureDef } from "../data/treasures";
 import { isUpgradable, upgradeEffect } from "../data/upgrades";
@@ -63,6 +65,9 @@ const deckPrompt = ref<DeckPrompt | null>(null);
 const deckView = ref(false);
 const slotView = ref(false);
 const treasureView = ref(false);
+const craftView = ref(false);
+const craftDone = ref<(() => void) | null>(null);
+const skillPick = ref<{ title: string; options: Array<{ label: string; detail: string; pick: () => void }> } | null>(null);
 const shopOffers = ref<Array<{ skill: SkillMeta; price: number }>>([]);
 const shopCards = ref<string[]>([]);
 const shopTreasure = ref<{ treasure: TreasureDef; price: number } | null>(null);
@@ -214,6 +219,69 @@ function renderTreasureOffer(current: Extract<View, { kind: "treasure" }>): VNod
 			button("放弃", () => current.resolve()),
 		]),
 	]);
+}
+
+function renderSkillPick(prompt: NonNullable<typeof skillPick.value>): VNode {
+	return h("div", { class: "rogue-panel" }, [
+		h("div", { class: "rogue-title" }, prompt.title),
+		prompt.options.length
+			? h(
+					"div",
+					{ class: "rogue-card-row" },
+					prompt.options.map(option =>
+						h(
+							"div",
+							{
+								class: "rogue-card",
+								onClick: () => {
+									skillPick.value = null;
+									option.pick();
+								},
+							},
+							[h("div", { class: "rogue-card-name" }, option.label), h("div", { class: "rogue-card-kind" }, option.detail)]
+						)
+					)
+				)
+			: h("div", { class: "rogue-subtitle" }, "暂无可升级的技能"),
+		button("返回", () => {
+			skillPick.value = null;
+		}),
+	]);
+}
+
+function renderCraftView(): VNode {
+	const state = currentState();
+	if (!state) return h("div");
+	const recipes = availableRecipes(state);
+	return h("div", { class: "rogue-panel" }, [
+		h("div", { class: "rogue-title" }, "融合 / 进化"),
+		recipes.length
+			? h(
+					"div",
+					{ class: "rogue-card-row" },
+					recipes.map(recipe =>
+						h("div", { class: "rogue-card", onClick: () => applyCraft(recipe) }, [
+							h("div", { class: "rogue-card-name" }, recipe.output.name),
+							h("div", { class: "rogue-card-kind" }, `${recipe.kind === "fusion" ? "融合" : "进化"} · ${recipe.inputs.map(cardName).join(" + ")}`),
+							h("div", { class: "rogue-card-tags" }, recipe.output.description),
+						])
+					)
+				)
+			: h("div", { class: "rogue-subtitle" }, "当前没有可执行的配方"),
+		button("返回", () => {
+			craftView.value = false;
+			craftDone.value = null;
+		}),
+	]);
+}
+
+function applyCraft(recipe: RecipeDef): void {
+	const state = currentState();
+	if (!state || !applyRecipe(state, recipe)) return;
+	craftView.value = false;
+	const done = craftDone.value;
+	craftDone.value = null;
+	done?.();
 }
 
 function renderSlotView(): VNode {
@@ -380,6 +448,15 @@ function renderView(current: View): VNode {
 						current.resolve();
 					}),
 					button("升级一张牌", () => promptUpgrade(current.state, () => current.resolve()), !hasUpgradable(current.state)),
+					button("升级技能", () => promptSkillLevel(current.state, () => current.resolve()), !hasUpgradableSkill(current.state)),
+					button(
+						"融合 / 进化",
+						() => {
+							craftDone.value = () => current.resolve();
+							craftView.value = true;
+						},
+						availableRecipes(current.state).length === 0
+					),
 					button("离开", () => current.resolve()),
 				]),
 			]);
@@ -501,6 +578,30 @@ function hasUpgradable(state: RunState): boolean {
 	return state.deck.some(card => isUpgradable(card.id) && !card.upgraded);
 }
 
+/** 是否有可升级（未满级）的槽位技能。 */
+function hasUpgradableSkill(state: RunState): boolean {
+	return (["active", "passive"] as const).some(kind => slotList(state, kind).some(skill => skill && skill.level < MAX_SKILL_LEVEL));
+}
+
+/** 休整：升级一个已装备的通用技能（Lv1-3）。 */
+function promptSkillLevel(state: RunState, onDone: () => void): void {
+	const options: Array<{ label: string; detail: string; pick: () => void }> = [];
+	for (const kind of ["active", "passive"] as const) {
+		slotList(state, kind).forEach((skill, index) => {
+			if (!skill || skill.level >= MAX_SKILL_LEVEL) return;
+			options.push({
+				label: `${cardName(skill.id)} Lv${skill.level}`,
+				detail: `${kind === "active" ? "主动" : "被动"} ${index + 1}`,
+				pick: () => {
+					upgradeSkillAt(state, kind, index);
+					onDone();
+				},
+			});
+		});
+	}
+	skillPick.value = { title: "选择要升级的技能", options };
+}
+
 function refreshShop(current: Extract<View, { kind: "shop" }>): void {
 	if (current.state.gold < 25) return;
 	addGold(current.state, -25);
@@ -532,6 +633,8 @@ export function mountMetaUI(): MetaUI {
 			void tick.value;
 			if (slotPrompt.value) return renderLayer(renderSlotPrompt(slotPrompt.value));
 			if (deckPrompt.value) return renderLayer(renderDeckPrompt(deckPrompt.value));
+			if (skillPick.value) return renderLayer(renderSkillPick(skillPick.value));
+			if (craftView.value) return renderLayer(renderCraftView());
 			if (deckView.value) return renderLayer(renderDeckView());
 			if (slotView.value) return renderLayer(renderSlotView());
 			if (treasureView.value) return renderLayer(renderTreasureView());

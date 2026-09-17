@@ -74,13 +74,25 @@ export function hasSkill(state: RunState, skillId: string): boolean {
 	return [...state.slots.active, ...state.slots.passive].some(skill => skill?.id === skillId);
 }
 
-export function equippedTags(state: RunState, getMeta: (id: string) => SkillMeta | undefined): string[] {
+export function equippedTags(state: RunState, getMeta: (id: string) => { tags?: string[] } | undefined): string[] {
 	const tags = new Set<string>();
 	for (const skill of [...state.slots.active, ...state.slots.passive]) {
 		if (!skill) continue;
 		for (const tag of getMeta(skill.id)?.tags ?? []) tags.add(tag);
 	}
 	return [...tags];
+}
+
+/** 技能等级上限（Lv1-3）。 */
+export const MAX_SKILL_LEVEL = 3;
+
+/** 提升槽位内技能的等级；满级或空槽返回 false。 */
+export function upgradeSkillAt(state: RunState, kind: SkillMeta["kind"], index: number): boolean {
+	const list = slotList(state, kind);
+	const skill = list[index];
+	if (!skill || skill.level >= MAX_SKILL_LEVEL) return false;
+	skill.level += 1;
+	return true;
 }
 
 export interface EquipResult {

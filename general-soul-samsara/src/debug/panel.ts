@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 import { ui } from "noname";
-import { M01_SKILLS } from "../data/skills";
+import { M01_SKILLS, getSkillMeta } from "../data/skills";
+import { RECIPES } from "../data/recipes";
+import { applyRecipe } from "../run/craft";
 import { injectStyles } from "../battle/engine/ui";
 import { addCard, addGold, addTreasure, equipSkill, heal, upgradeCardAt } from "../run/state";
 import { getTreasure } from "../data/treasures";
@@ -47,6 +49,15 @@ export function installDebugPanel(debug: DebugHandle): void {
 	});
 	addAction(panel, "跳到章尾", () => {
 		debug.state.layer = LAYER_COUNT - 1;
+		debug.meta.refresh();
+	});
+	addAction(panel, "演示融合", () => {
+		for (const id of ["wusheng", "tieqi"]) {
+			const skill = getSkillMeta(id);
+			if (skill) equipSkill(debug.state, skill);
+		}
+		const recipe = RECIPES.find(item => item.id === "shenwei");
+		if (recipe) applyRecipe(debug.state, recipe);
 		debug.meta.refresh();
 	});
 	addAction(panel, "直接胜利", () => {
