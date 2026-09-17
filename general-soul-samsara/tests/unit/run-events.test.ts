@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createRng } from "../../src/shared/rng";
 import { EVENTS, applyEventEffects, rollEvent } from "../../src/run/events";
 import { createRunState } from "../../src/run/state";
+import { isCurse } from "../../src/data/curses";
 
 describe("事件表", () => {
 	it("4 个事件、每个 3 个选项、章节分布正确", () => {
@@ -56,6 +57,18 @@ describe("事件效果结算", () => {
 		const pending = applyEventEffects(state, [{ kind: "skill", skillKind: "passive" }]);
 		expect(pending.skillKind).toBe("passive");
 		expect(pending.skillId).toBeUndefined();
+	});
+
+	it("诅咒与宝物效果", () => {
+		const state = createRunState("seed");
+		const before = state.deck.length;
+		const pending = applyEventEffects(state, [
+			{ kind: "curse", curses: ["rogue_curse_du"] },
+			{ kind: "treasure", value: 2 },
+		]);
+		expect(state.deck).toHaveLength(before + 1);
+		expect(isCurse(state.deck[state.deck.length - 1].id)).toBe(true);
+		expect(pending.treasures).toBe(2);
 	});
 });
 

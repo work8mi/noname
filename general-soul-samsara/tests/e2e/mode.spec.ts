@@ -98,5 +98,13 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await page.locator(".rogue-button", { hasText: "查看牌组" }).click();
 	await expect(page.locator(".rogue-card-name", { hasText: "杀+" })).toBeVisible({ timeout: 30_000 });
 	await page.locator(".rogue-button", { hasText: "返回" }).click();
+
+	// 诅咒牌：调试获得一张毒，牌组面板可见
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "获得一张毒" }).click();
+	await setDebugPanelOpen(false);
+	await page.locator(".rogue-button", { hasText: "查看牌组" }).click();
+	await expect(page.locator(".rogue-card-name", { hasText: "毒" })).toBeVisible({ timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "返回" }).click();
 	expect(errors).toEqual([]);
 });
