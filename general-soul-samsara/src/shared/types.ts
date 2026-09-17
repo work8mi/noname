@@ -1,0 +1,62 @@
+/** 敌人意图类型。 */
+export type IntentType = "attack" | "defend" | "charge" | "discard" | "judge" | "summon" | "seal";
+
+export interface Intent {
+	type: IntentType;
+	/** 攻击类意图的伤害参数（例如蓄力后的加值）。 */
+	value?: number;
+}
+
+export interface IntentContext {
+	hp: number;
+	maxHp: number;
+	charge: number;
+	turn: number;
+}
+
+export interface IntentEntry {
+	type: IntentType;
+	weight: number;
+	/** 仅当条件满足时参与抽取。 */
+	when?: (context: IntentContext) => boolean;
+	value?: number;
+}
+
+/** 敌人词缀。 */
+export type AffixId = "tiejia" | "kuangbao" | "hudun" | "xipai" | "yaoshu" | "zhaohuan";
+
+export interface EnemyDef {
+	/** 内部 id（同时用于注册武将）。 */
+	id: string;
+	name: string;
+	hp: number;
+	affixes: AffixId[];
+	intents: IntentEntry[];
+	/** 敌方牌表（卡牌 id 列表，抽空后重洗）。 */
+	deck: string[];
+}
+
+export type SkillQuality = "common" | "rare" | "legendary";
+
+export interface SkillMeta {
+	id: string;
+	name: string;
+	kind: "active" | "passive";
+	tags: string[];
+	quality: SkillQuality;
+	/** Lv2、Lv3 的强化说明（M0 仅展示，数值后续接入）。 */
+	levels: [string, string];
+}
+
+export interface DeckCard {
+	name: string;
+	count: number;
+}
+
+/** 一场战斗的配置。 */
+export interface BattlePlan {
+	playerCharacter: string;
+	playerDeck: string[];
+	enemies: EnemyDef[];
+	seed: string;
+}
