@@ -1,22 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../../src/shared/rng";
-import { cardPrice, pickGrantedSkill, rollShopCards } from "../../src/run/rewards";
+import { CARD_KIND_LABELS, SHOP_CARDS, cardKindLabel, cardPrice, pickGrantedSkill, rollShopCards } from "../../src/run/rewards";
 import { createRunState, equipSkill } from "../../src/run/state";
 import { getSkillMeta } from "../../src/data/skills";
 
 describe("商店卡牌", () => {
-	it("随机 3 张不重复且可复现", () => {
+	it("默认抽取 5 张、不重复且可复现", () => {
 		const rng = createRng("shop");
 		const cards = rollShopCards(rng);
-		expect(cards).toHaveLength(3);
-		expect(new Set(cards).size).toBe(3);
+		expect(cards).toHaveLength(5);
+		expect(new Set(cards).size).toBe(5);
 		expect(rollShopCards(createRng("shop"))).toEqual(cards);
 	});
 
-	it("价格表覆盖常见卡牌并带默认值", () => {
+	it("卡池覆盖基本牌 / 锦囊 / 特殊锦囊 / 武器 / 防具", () => {
+		const kinds = new Set(SHOP_CARDS.map(card => card.kind));
+		expect([...kinds].sort()).toEqual(Object.keys(CARD_KIND_LABELS).sort());
+		for (const id of ["taoyuan", "wugu", "huogong", "tiesuo", "zhuge", "bagua", "renwang"]) {
+			expect(SHOP_CARDS.some(card => card.id === id), id).toBe(true);
+		}
+	});
+
+	it("价格与类型标签", () => {
 		expect(cardPrice("sha")).toBe(50);
 		expect(cardPrice("nanman")).toBe(120);
+		expect(cardPrice("taoyuan")).toBe(150);
 		expect(cardPrice("unknown-card")).toBe(80);
+		expect(cardKindLabel("zhuge")).toBe("武器");
+		expect(cardKindLabel("bagua")).toBe("防具");
+		expect(cardKindLabel("tiesuo")).toBe("特殊锦囊");
+		expect(cardKindLabel("unknown-card")).toBe("卡牌");
 	});
 });
 
