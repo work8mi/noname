@@ -85,6 +85,11 @@ describe("敌人配置", () => {
 		}
 	});
 
+	it("妖道带有封印意图", () => {
+		const yaodao = MOB_DEFS.find(mob => mob.id === "rogue_yaodao")!;
+		expect(yaodao.intents.some(intent => intent.type === "seal")).toBe(true);
+	});
+
 	it("pickEncounter 至少返回一个敌人且不超过数量", () => {
 		expect(pickEncounter(MOB_DEFS, 0)).toHaveLength(1);
 		expect(pickEncounter(MOB_DEFS, 2)).toHaveLength(2);
