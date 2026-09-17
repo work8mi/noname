@@ -19,6 +19,12 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	const errors: string[] = [];
 	page.on("pageerror", error => errors.push(String(error)));
 
+	/** 幂等地开关调试面板（按钮是 toggle）。 */
+	const setDebugPanelOpen = async (open: boolean) => {
+		const hidden = await page.locator(".rogue-debug-panel").evaluate(node => node.classList.contains("rogue-hidden"));
+		if (hidden === open) await page.locator(".rogue-debug-button").click();
+	};
+
 	await page.goto("/");
 	await page.waitForSelector("#window", { state: "attached", timeout: 120_000 });
 
@@ -52,7 +58,7 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await expect(page.locator(".rogue-intent").first()).toBeVisible({ timeout: 60_000 });
 
 	// 通过调试面板结束战斗，验证胜利结算 → 技能三选一 → 回到地图
-	await page.locator(".rogue-debug-button").click();
+	await setDebugPanelOpen(true);
 	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "直接胜利" }).click();
 	// 判定在玩家当前行动结束后生效：结束出牌阶段，并处理弃牌阶段的强制弃牌
 	await page.locator("#control").getByText("结束回合").click();
@@ -72,5 +78,17 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await expect(page.locator(".rogue-description")).toContainText("桃园", { timeout: 30_000 });
 	await page.locator(".rogue-option", { hasText: "独行" }).click();
 	await expect(page.locator(".rogue-title")).toHaveText("第 1 章", { timeout: 30_000 });
+
+	// 宝物：调试发放后可在查看面板确认，槽位宝物会扩展主动槽
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "获得咆哮令" }).click();
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "获得将魂灯" }).click();
+	await setDebugPanelOpen(false);
+	await page.locator(".rogue-button", { hasText: "查看宝物" }).click();
+	await expect(page.locator(".rogue-card-name", { hasText: "咆哮令" })).toBeVisible({ timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "返回" }).click();
+	await page.locator(".rogue-button", { hasText: "查看技能" }).click();
+	await expect(page.locator(".rogue-card-kind").filter({ hasText: "主动 4" })).toBeVisible({ timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "返回" }).click();
 	expect(errors).toEqual([]);
 });
