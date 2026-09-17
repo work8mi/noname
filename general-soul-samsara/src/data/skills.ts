@@ -16,7 +16,7 @@ export const M01_SKILLS: readonly SkillMeta[] = [
 		kind: "active",
 		tags: ["卖血", "爆发"],
 		quality: "common",
-		levels: ["失去 2 点体力，摸 3 张牌。", "失去 1 点体力即可摸 3 张牌。"],
+		levels: ["苦肉后摸 1 张牌。", "苦肉后额外再摸 1 张牌。"],
 	},
 	{
 		id: "zhiheng",
@@ -60,7 +60,7 @@ export const M03_SKILLS: readonly SkillMeta[] = [
 		kind: "active",
 		tags: ["判定", "过牌"],
 		quality: "rare",
-		levels: ["准备阶段多看 1 张牌。", "准备阶段可多调整 2 张牌。"],
+		levels: ["准备阶段结束后摸 1 张牌。", "准备阶段结束后额外再摸 1 张牌。"],
 	},
 	{
 		id: "tieqi",
@@ -76,7 +76,7 @@ export const M03_SKILLS: readonly SkillMeta[] = [
 		kind: "active",
 		tags: ["控制", "过牌"],
 		quality: "rare",
-		levels: ["黑色牌当【过河拆桥】后可摸 1 张牌。", "黑色牌当【过河拆桥】时可拆 2 张牌。"],
+		levels: ["黑色牌当【过河拆桥】后可摸 1 张牌。", "黑色牌当【过河拆桥】时额外随机弃置目标一张牌。"],
 	},
 	{
 		id: "fankui",

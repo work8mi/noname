@@ -13,7 +13,7 @@ import { TREASURE_SKILLS } from "./treasures";
 import { rogue_upgrade_rules } from "./upgrades";
 import { CURSE_CARDS, CURSE_TRANSLATE, rogue_curse_rules } from "./curses";
 import { RECIPE_SKILLS } from "./recipes";
-import { LEVEL_SKILL_DEFS } from "./levels";
+import { LEVEL_SKILL_DEFS } from "./level-effects";
 import { RECIPE_TRANSLATE } from "../data/recipes";
 
 export const type = "mode";
