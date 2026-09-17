@@ -6,7 +6,7 @@ on:
       - "general-soul-samsara/**"
       - ".github/workflows/general-soul-samsara.yml"
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "general-soul-samsara/**"
       - ".github/workflows/general-soul-samsara.yml"
