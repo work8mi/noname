@@ -13,6 +13,7 @@ import { TREASURE_SKILLS } from "./treasures";
 import { rogue_upgrade_rules } from "./upgrades";
 import { CURSE_CARDS, CURSE_TRANSLATE, rogue_curse_rules } from "./curses";
 import { RECIPE_SKILLS } from "./recipes";
+import { LEVEL_SKILL_DEFS } from "./levels";
 import { RECIPE_TRANSLATE } from "../data/recipes";
 
 export const type = "mode";
@@ -32,6 +33,7 @@ export default function () {
 			rogue_curse_rules,
 			...TREASURE_SKILLS,
 			...RECIPE_SKILLS,
+			...LEVEL_SKILL_DEFS,
 		},
 		game: {
 			/** 单场战斗结束由模式接管，屏蔽引擎默认结算与再战按钮。 */

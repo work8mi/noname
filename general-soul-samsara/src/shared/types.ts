@@ -75,6 +75,12 @@ export interface DeckEntry {
 	upgraded?: boolean;
 }
 
+/** 通用槽内技能的战斗配置。 */
+export interface SkillSlotPlan {
+	id: string;
+	level: number;
+}
+
 /** 一场战斗的配置。 */
 export interface BattlePlan {
 	playerCharacter: string;
@@ -83,6 +89,6 @@ export interface BattlePlan {
 	seed: string;
 	/** 本场战斗生效的宝物（引擎技能在开战时安装）。 */
 	treasures: string[];
-	/** 通用槽内的技能（含融合/进化产物），开战时安装到玩家身上。 */
-	skills: string[];
+	/** 通用槽内的技能（含融合/进化产物与等级），开战时安装到玩家身上。 */
+	skills: SkillSlotPlan[];
 }

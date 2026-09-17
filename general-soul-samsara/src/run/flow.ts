@@ -131,7 +131,7 @@ export async function runBattle(
 		enemies,
 		seed: `${state.seed}-${node.id}`,
 		treasures: [...state.treasures],
-		skills: [...state.slots.active, ...state.slots.passive].map(skill => skill?.id).filter((id): id is string => Boolean(id)),
+		skills: [...state.slots.active, ...state.slots.passive].filter(Boolean).map(skill => ({ id: skill!.id, level: skill!.level })),
 	};
 	meta.setVisible(false);
 	ui.arena.style.display = "";

@@ -299,7 +299,7 @@ function renderSlotView(): VNode {
 			rows.map(row =>
 				h("div", { class: "rogue-card" }, [
 					h("div", { class: "rogue-card-name" }, row.slot ? cardName(row.slot.id) : "空槽"),
-					h("div", { class: "rogue-card-kind" }, row.label),
+					h("div", { class: "rogue-card-kind" }, row.slot ? `${row.label} · Lv${row.slot.level}` : row.label),
 				])
 			)
 		),
