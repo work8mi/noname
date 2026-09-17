@@ -1,6 +1,7 @@
 import { game, lib, _status } from "noname";
 import type { Rng } from "../../shared/rng";
 import type { BattlePlan, EnemyDef } from "../../shared/types";
+import { getTreasure } from "../../data/treasures";
 import { installPile } from "./piles";
 import { createIntentBadge, injectStyles } from "./ui";
 
@@ -49,6 +50,11 @@ export async function setupBattle(plan: BattlePlan, rng: Rng, hp?: number): Prom
 		me.update();
 	}
 	installPile(me, plan.playerDeck, rng);
+	me.addSkill("rogue_rule_draw");
+	for (const treasureId of plan.treasures) {
+		const treasure = getTreasure(treasureId);
+		if (treasure?.skillId) me.addSkill(treasure.skillId);
+	}
 
 	const enemies: any[] = [];
 	for (let i = 0; i < plan.enemies.length; i++) {

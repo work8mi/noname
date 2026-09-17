@@ -2,7 +2,8 @@
 import { ui } from "noname";
 import { M01_SKILLS } from "../data/skills";
 import { injectStyles } from "../battle/engine/ui";
-import { addGold, equipSkill, heal } from "../run/state";
+import { addGold, addTreasure, equipSkill, heal } from "../run/state";
+import { getTreasure } from "../data/treasures";
 import { clearRun } from "../run/save";
 import { SEED_KEY } from "../shared/constants";
 import type { DebugHandle } from "../run/flow";
@@ -29,6 +30,12 @@ export function installDebugPanel(debug: DebugHandle): void {
 	});
 	addAction(panel, "获得全部技能", () => {
 		for (const skill of M01_SKILLS) equipSkill(debug.state, skill);
+	});
+	addAction(panel, "获得咆哮令", () => {
+		addTreasure(debug.state, "paoxiaoling");
+	});
+	addAction(panel, "获得将魂灯", () => {
+		addTreasure(debug.state, "jianghundeng");
 	});
 	addAction(panel, "直接胜利", () => {
 		debug.forceResult("victory");

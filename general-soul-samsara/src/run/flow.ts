@@ -12,6 +12,7 @@ import { generateChapter } from "./map";
 import { addGold, type RunState } from "./state";
 import { applyEventEffects, rollEvent } from "./events";
 import { pickGrantedSkill, rollEliteGold, rollGold, rollSkillOffers } from "./rewards";
+import { rollTreasure } from "../data/treasures";
 import { clearRun, saveRun } from "./save";
 
 export interface DebugHandle {
@@ -83,6 +84,10 @@ async function resolveNode(
 			if (result === "defeat") return "defeat";
 			const gold = node.type === "elite" ? rollEliteGold(rng) : rollGold(rng);
 			addGold(state, gold);
+			if (node.type === "elite") {
+				const treasure = rollTreasure(rng, state.treasures, ["common", "rare", "legendary"]);
+				if (treasure) await meta.offerTreasure(treasure, state);
+			}
 			await meta.offerReward(rollSkillOffers(state, rng), gold, state);
 			return "victory";
 		}
@@ -106,6 +111,7 @@ export async function runBattle(
 		playerDeck: state.deck.map(card => card.id),
 		enemies,
 		seed: `${state.seed}-${node.id}`,
+		treasures: [...state.treasures],
 	};
 	meta.setVisible(false);
 	ui.arena.style.display = "";

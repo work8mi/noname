@@ -59,4 +59,6 @@ export interface BattlePlan {
 	playerDeck: string[];
 	enemies: EnemyDef[];
 	seed: string;
+	/** 本场战斗生效的宝物（引擎技能在开战时安装）。 */
+	treasures: string[];
 }

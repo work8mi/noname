@@ -1,7 +1,11 @@
 import { getCharacterDeck } from "../data/decks";
+import { getTreasure } from "../data/treasures";
 import type { SkillMeta } from "../shared/types";
 
 export const SLOT_COUNT = 3;
+
+/** 宝物可把某一类槽位扩展到 4 个（概要设计 §5.1）。 */
+export const MAX_SLOT_COUNT = 4;
 
 export interface RunCard {
 	id: string;
@@ -129,4 +133,22 @@ export function removeCardAt(state: RunState, index: number): RunCard | undefine
 
 export function countCard(state: RunState, id: string): number {
 	return state.deck.filter(card => card.id === id).length;
+}
+
+/** 获得宝物；槽位类宝物立即扩展对应槽位。 */
+export function addTreasure(state: RunState, id: string): boolean {
+	const treasure = getTreasure(id);
+	if (!treasure || state.treasures.includes(id)) return false;
+	state.treasures.push(id);
+	if (treasure.meta === "active-slot" && state.slots.active.length < MAX_SLOT_COUNT) {
+		state.slots.active.push(null);
+	}
+	if (treasure.meta === "passive-slot" && state.slots.passive.length < MAX_SLOT_COUNT) {
+		state.slots.passive.push(null);
+	}
+	return true;
+}
+
+export function hasTreasure(state: RunState, id: string): boolean {
+	return state.treasures.includes(id);
 }

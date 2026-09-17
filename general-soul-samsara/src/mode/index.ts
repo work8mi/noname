@@ -9,6 +9,7 @@ import { injectStyles } from "../battle/engine/ui";
 import { installDebugPanel } from "../debug/panel";
 import type { BattleRuntime } from "../battle/engine/setup";
 import { rogue_kuangbao, rogue_tiejia } from "./skills";
+import { TREASURE_SKILLS } from "./treasures";
 
 export const type = "mode";
 
@@ -18,12 +19,9 @@ export default function () {
 		skill: {
 			rogue_tiejia,
 			rogue_kuangbao,
+			...TREASURE_SKILLS,
 		},
 		game: {
-			/** 每回合摸 3 张（概要设计 §3.1）。 */
-			modPhaseDraw(player: any) {
-				return player.draw(3);
-			},
 			/** 单场战斗结束由模式接管，屏蔽引擎默认结算与再战按钮。 */
 			controlOver() {
 				return true;

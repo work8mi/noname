@@ -4,13 +4,15 @@ import type { Rng } from "../shared/rng";
 import type { SkillMeta } from "../shared/types";
 import { NODE_LABELS, type ChapterMap, type MapNode } from "../run/map";
 import type { EventOption, RunEventDef } from "../run/events";
-import { addCard, addGold, equipSkill, hasSkill, heal, removeCardAt, type RunState } from "../run/state";
+import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, type RunState } from "../run/state";
 import { availableSkillPool, cardPrice, removeCardPrice, rollShopCards, skillPrice } from "../run/rewards";
+import { QUALITY_LABELS, getTreasure, rollTreasure, treasurePrice, type TreasureDef } from "../data/treasures";
 
 export interface MetaUI {
 	start(hasSave: boolean): Promise<"new" | "continue">;
 	chooseNode(map: ChapterMap, state: RunState): Promise<MapNode>;
 	offerReward(offers: SkillMeta[], gold: number, state: RunState): Promise<SkillMeta | undefined>;
+	offerTreasure(treasure: TreasureDef, state: RunState): Promise<void>;
 	chooseEventOption(def: RunEventDef, state: RunState): Promise<EventOption>;
 	promptRemoveCard(state: RunState, title: string): Promise<boolean>;
 	openShop(state: RunState, rng: Rng): Promise<void>;
@@ -26,6 +28,7 @@ type View =
 	| { kind: "start"; hasSave: boolean; resolve: Resolver<"new" | "continue"> }
 	| { kind: "map"; map: ChapterMap; state: RunState; resolve: Resolver<MapNode> }
 	| { kind: "reward"; offers: SkillMeta[]; gold: number; state: RunState; resolve: Resolver<SkillMeta | undefined> }
+	| { kind: "treasure"; treasure: TreasureDef; state: RunState; resolve: Resolver<void> }
 	| { kind: "event"; def: RunEventDef; state: RunState; resolve: Resolver<EventOption> }
 	| { kind: "shop"; state: RunState; rng: Rng; resolve: Resolver<void> }
 	| { kind: "rest"; state: RunState; resolve: Resolver<void> }
@@ -48,8 +51,10 @@ const slotPrompt = ref<SlotPrompt | null>(null);
 const deckPrompt = ref<DeckPrompt | null>(null);
 const deckView = ref(false);
 const slotView = ref(false);
-const shopOffers = ref<SkillMeta[]>([]);
+const treasureView = ref(false);
+const shopOffers = ref<Array<{ skill: SkillMeta; price: number }>>([]);
 const shopCards = ref<string[]>([]);
+const shopTreasure = ref<{ treasure: TreasureDef; price: number } | null>(null);
 
 function cardName(id: string): string {
 	return (lib.translate as Record<string, string>)[id] ?? id;
@@ -135,6 +140,51 @@ function renderDeckView(): VNode {
 	]);
 }
 
+function renderTreasureView(): VNode {
+	const state = currentState();
+	if (!state) return h("div");
+	return h("div", { class: "rogue-panel" }, [
+		h("div", { class: "rogue-title" }, "宝物"),
+		h("div", { class: "rogue-stats" }, `共 ${state.treasures.length} 件`),
+		state.treasures.length
+			? h(
+					"div",
+					{ class: "rogue-card-row" },
+					state.treasures.map(id => {
+						const treasure = getTreasure(id);
+						return h("div", { class: "rogue-card" }, [
+							h("div", { class: "rogue-card-name" }, treasure?.name ?? id),
+							h("div", { class: "rogue-card-kind" }, treasure ? QUALITY_LABELS[treasure.quality] : ""),
+							h("div", { class: "rogue-card-tags" }, treasure?.description ?? ""),
+						]);
+					})
+				)
+			: h("div", { class: "rogue-subtitle" }, "尚未获得宝物"),
+		button("返回", () => {
+			treasureView.value = false;
+		}),
+	]);
+}
+
+function renderTreasureOffer(current: Extract<View, { kind: "treasure" }>): VNode {
+	const treasure = current.treasure;
+	return h("div", { class: "rogue-panel" }, [
+		h("div", { class: "rogue-title" }, "获得宝物"),
+		h("div", { class: "rogue-card" }, [
+			h("div", { class: "rogue-card-name" }, treasure.name),
+			h("div", { class: "rogue-card-kind" }, QUALITY_LABELS[treasure.quality]),
+			h("div", { class: "rogue-card-tags" }, treasure.description),
+		]),
+		h("div", { class: "rogue-button-row" }, [
+			button("领取", () => {
+				addTreasure(current.state, treasure.id);
+				current.resolve();
+			}),
+			button("放弃", () => current.resolve()),
+		]),
+	]);
+}
+
 function renderSlotView(): VNode {
 	const state = currentState();
 	if (!state) return h("div");
@@ -184,6 +234,9 @@ function renderView(current: View): VNode {
 					button("查看技能", () => {
 						slotView.value = true;
 					}),
+					button("查看宝物", () => {
+						treasureView.value = true;
+					}),
 				]),
 				...current.map.layers.map((layer, layerIndex) =>
 					h("div", { class: ["rogue-row", layerIndex === current.state.layer ? "rogue-row-current" : ""] }, [
@@ -214,6 +267,8 @@ function renderView(current: View): VNode {
 				),
 				button("跳过", () => current.resolve(undefined)),
 			]);
+		case "treasure":
+			return renderTreasureOffer(current);
 		case "event":
 			return h("div", { class: "rogue-panel" }, [
 				h("div", { class: "rogue-title" }, current.def.name),
@@ -247,12 +302,32 @@ function renderView(current: View): VNode {
 				h(
 					"div",
 					{ class: "rogue-card-row" },
-					shopOffers.value.map(skill => {
-						const price = skillPrice(skill, current.rng);
-						const disabled = current.state.gold < price || hasSkill(current.state, skill.id);
-						return skillCard(skill, () => buySkill(current, skill, price), disabled, price);
+					shopOffers.value.map(item => {
+						const disabled = current.state.gold < item.price || hasSkill(current.state, item.skill.id);
+						return skillCard(item.skill, () => buySkill(current, item), disabled, item.price);
 					})
 				),
+				h("div", { class: "rogue-section" }, "宝物"),
+				shopTreasure.value
+					? h(
+							"div",
+							{ class: "rogue-card-row" },
+							[
+								h(
+									"div",
+									{
+										class: ["rogue-card", current.state.gold < shopTreasure.value.price ? "rogue-disabled" : ""],
+										onClick: current.state.gold < shopTreasure.value.price ? undefined : () => buyTreasure(current),
+									},
+									[
+										h("div", { class: "rogue-card-name" }, shopTreasure.value.treasure.name),
+										h("div", { class: "rogue-card-kind" }, `${QUALITY_LABELS[shopTreasure.value.treasure.quality]} · ${shopTreasure.value.price} 金币`),
+										h("div", { class: "rogue-card-tags" }, shopTreasure.value.treasure.description),
+									]
+								),
+							]
+						)
+					: h("div", { class: "rogue-subtitle" }, "宝物已售罄"),
 				h("div", { class: "rogue-button-row" }, [
 					button(
 						`删牌（${removeCardPrice(current.state)} 金币）`,
@@ -310,11 +385,21 @@ function buyCard(current: Extract<View, { kind: "shop" }>, id: string, price: nu
 	shopCards.value = shopCards.value.filter(card => card !== id);
 }
 
-function buySkill(current: Extract<View, { kind: "shop" }>, skill: SkillMeta, price: number): void {
+function buyTreasure(current: Extract<View, { kind: "shop" }>): void {
+	const slot = shopTreasure.value;
+	if (!slot) return;
+	if (current.state.gold < slot.price || current.state.treasures.includes(slot.treasure.id)) return;
+	addGold(current.state, -slot.price);
+	addTreasure(current.state, slot.treasure.id);
+	shopTreasure.value = null;
+}
+
+function buySkill(current: Extract<View, { kind: "shop" }>, item: { skill: SkillMeta; price: number }): void {
+	const { skill, price } = item;
 	if (current.state.gold < price || hasSkill(current.state, skill.id)) return;
 	const charge = () => {
 		addGold(current.state, -price);
-		shopOffers.value = shopOffers.value.filter(item => item.id !== skill.id);
+		shopOffers.value = shopOffers.value.filter(entry => entry.skill.id !== skill.id);
 	};
 	const result = equipSkill(current.state, skill);
 	if (result.needReplace) {
@@ -355,8 +440,15 @@ function promptDelete(state: RunState, onDone: () => void): void {
 function refreshShop(current: Extract<View, { kind: "shop" }>): void {
 	if (current.state.gold < 25) return;
 	addGold(current.state, -25);
-	shopOffers.value = pickShopOffers(current.state, current.rng);
-	shopCards.value = rollShopCards(current.rng);
+	rollShopStock(current.state, current.rng);
+}
+
+/** 重新生成商店货架：技能、卡牌、宝物（价格在生成时固定）。 */
+function rollShopStock(state: RunState, rng: Rng): void {
+	shopOffers.value = pickShopOffers(state, rng).map(skill => ({ skill, price: skillPrice(skill, rng) }));
+	shopCards.value = rollShopCards(rng);
+	const treasure = rollTreasure(rng, state.treasures, ["common", "rare", "legendary"]);
+	shopTreasure.value = treasure ? { treasure, price: treasurePrice(treasure, rng) } : null;
 }
 
 export function pickShopOffers(state: RunState, rng: Rng): SkillMeta[] {
@@ -377,6 +469,7 @@ export function mountMetaUI(): MetaUI {
 			if (deckPrompt.value) return renderLayer(renderDeckPrompt(deckPrompt.value));
 			if (deckView.value) return renderLayer(renderDeckView());
 			if (slotView.value) return renderLayer(renderSlotView());
+			if (treasureView.value) return renderLayer(renderTreasureView());
 			return renderLayer(renderView(view.value));
 		},
 	});
@@ -396,6 +489,11 @@ export function mountMetaUI(): MetaUI {
 		offerReward(offers, gold, state) {
 			return new Promise(resolve => {
 				view.value = { kind: "reward", offers, gold, state, resolve };
+			});
+		},
+		offerTreasure(treasure, state) {
+			return new Promise(resolve => {
+				view.value = { kind: "treasure", treasure, state, resolve };
 			});
 		},
 		chooseEventOption(def, state) {
@@ -421,8 +519,7 @@ export function mountMetaUI(): MetaUI {
 		},
 		openShop(state, rng) {
 			return new Promise(resolve => {
-				shopOffers.value = pickShopOffers(state, rng);
-				shopCards.value = rollShopCards(rng);
+				rollShopStock(state, rng);
 				view.value = { kind: "shop", state, rng, resolve };
 			});
 		},
