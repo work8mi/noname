@@ -112,6 +112,14 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await expect(page.locator(".rogue-card-name", { hasText: "毒" })).toBeVisible({ timeout: 30_000 });
 	await page.locator(".rogue-button", { hasText: "返回" }).click();
 
+	// 融合：武圣 + 铁骑 → 神威（技能槽内可见）
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "演示融合" }).click();
+	await setDebugPanelOpen(false);
+	await page.locator(".rogue-button", { hasText: "查看技能" }).click();
+	await expect(page.locator(".rogue-card-name", { hasText: "神威" })).toBeVisible({ timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "返回" }).click();
+
 	// 章尾精英：跳到章尾 → 华雄 → 奖励 → 章间过渡
 	await setDebugPanelOpen(true);
 	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "跳到章尾" }).click();
