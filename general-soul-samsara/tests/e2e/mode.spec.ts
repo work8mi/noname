@@ -90,5 +90,13 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 	await page.locator(".rogue-button", { hasText: "查看技能" }).click();
 	await expect(page.locator(".rogue-card-kind").filter({ hasText: "主动 4" })).toBeVisible({ timeout: 30_000 });
 	await page.locator(".rogue-button", { hasText: "返回" }).click();
+
+	// 卡牌升级：调试升级一张杀，牌组面板显示为「杀+」
+	await setDebugPanelOpen(true);
+	await page.locator(".rogue-debug-panel .rogue-button", { hasText: "升级一张杀" }).click();
+	await setDebugPanelOpen(false);
+	await page.locator(".rogue-button", { hasText: "查看牌组" }).click();
+	await expect(page.locator(".rogue-card-name", { hasText: "杀+" })).toBeVisible({ timeout: 30_000 });
+	await page.locator(".rogue-button", { hasText: "返回" }).click();
 	expect(errors).toEqual([]);
 });
