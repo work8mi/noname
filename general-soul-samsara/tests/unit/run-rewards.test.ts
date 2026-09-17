@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../../src/shared/rng";
-import { availableSkillPool, removeCardPrice, rollEliteGold, rollGold, rollSkillOffers, skillPrice } from "../../src/run/rewards";
+import { availableSkillPool, MAX_SALES_PER_CHAPTER, removeCardPrice, rollBossGold, rollEliteGold, rollGold, rollSkillOffers, salesLeft, sellPrice, skillPrice } from "../../src/run/rewards";
 import { createRunState, equipSkill } from "../../src/run/state";
 import { getSkillMeta } from "../../src/data/skills";
 
 describe("奖励与经济", () => {
-	it("普通战金币 15-25，精英战 40-60", () => {
+	it("金币区间：普通 20-30、精英 50-70、首领 100-140", () => {
 		const rng = createRng("gold");
 		for (let i = 0; i < 100; i++) {
 			const gold = rollGold(rng);
-			expect(gold).toBeGreaterThanOrEqual(15);
-			expect(gold).toBeLessThanOrEqual(25);
+			expect(gold).toBeGreaterThanOrEqual(20);
+			expect(gold).toBeLessThanOrEqual(30);
 			const elite = rollEliteGold(rng);
-			expect(elite).toBeGreaterThanOrEqual(40);
-			expect(elite).toBeLessThanOrEqual(60);
+			expect(elite).toBeGreaterThanOrEqual(50);
+			expect(elite).toBeLessThanOrEqual(70);
+			const boss = rollBossGold(rng);
+			expect(boss).toBeGreaterThanOrEqual(100);
+			expect(boss).toBeLessThanOrEqual(140);
 		}
 	});
 
@@ -53,5 +56,24 @@ describe("奖励与经济", () => {
 		expect(removeCardPrice(state)).toBe(75);
 		state.battleCount = 2;
 		expect(removeCardPrice(state)).toBe(125);
+	});
+});
+
+describe("售卖卡牌", () => {
+	it("回收价：基本牌 15、其他 30、诅咒与未知 10", () => {
+		expect(sellPrice("sha")).toBe(15);
+		expect(sellPrice("tao")).toBe(15);
+		expect(sellPrice("wuzhong")).toBe(30);
+		expect(sellPrice("zhuge")).toBe(30);
+		expect(sellPrice("rogue_curse_du")).toBe(10);
+	});
+
+	it("每章次数上限与剩余次数", () => {
+		const state = createRunState("seed");
+		expect(salesLeft(state)).toBe(MAX_SALES_PER_CHAPTER);
+		state.salesUsed = MAX_SALES_PER_CHAPTER;
+		expect(salesLeft(state)).toBe(0);
+		state.salesUsed = MAX_SALES_PER_CHAPTER + 2;
+		expect(salesLeft(state)).toBe(0);
 	});
 });
