@@ -25,15 +25,23 @@ test("可以直接进入将魂轮回并开始战斗", async ({ page }) => {
 		if (hidden === open) await page.locator(".rogue-debug-button").click();
 	};
 
-	/** 结束当前出牌阶段并处理强制弃牌。 */
+	/** 结束当前出牌阶段并处理强制弃牌（兼容「全选+确定」与「点牌即弃」两种交互）。 */
 	const finishPlayerTurn = async () => {
 		await page.locator("#control").getByText("结束回合").click();
-		await page.waitForTimeout(1000);
-		const selectAll = page.locator("#control").getByText("全选", { exact: true });
-		if ((await selectAll.count()) > 0) {
-			await selectAll.first().click();
+		for (let i = 0; i < 16; i++) {
+			await page.waitForTimeout(500);
+			const metaVisible = await page.locator("#rogue-meta").evaluate(node => (node as HTMLElement).style.display !== "none");
+			if (metaVisible) return;
+			const selectAll = page.locator("#control").getByText("全选", { exact: true });
+			if (await selectAll.count()) await selectAll.first().click();
 			const confirm = page.locator("#control").getByText("确定", { exact: true });
-			if ((await confirm.count()) > 0) await confirm.first().click();
+			if (await confirm.count()) {
+				await confirm.first().click();
+				continue;
+			}
+			// 没有确定键时，点选一张手牌推进选择
+			const cards = page.locator("#handcards1 .card, #handcards2 .card");
+			if ((await cards.count()) > 0) await cards.first().click({ timeout: 2000 }).catch(() => {});
 		}
 	};
 

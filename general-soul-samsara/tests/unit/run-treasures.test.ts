@@ -4,8 +4,8 @@ import { QUALITY_LABELS, TREASURES, getTreasure, rollTreasure, treasurePrice } f
 import { MAX_SLOT_COUNT, addTreasure, createRunState, hasTreasure } from "../../src/run/state";
 
 describe("宝物数据", () => {
-	it("9 件宝物、id 唯一、品质合法", () => {
-		expect(TREASURES).toHaveLength(9);
+	it("13 件宝物、id 唯一、品质合法", () => {
+		expect(TREASURES).toHaveLength(13);
 		const ids = TREASURES.map(treasure => treasure.id);
 		expect(new Set(ids).size).toBe(ids.length);
 		for (const treasure of TREASURES) {

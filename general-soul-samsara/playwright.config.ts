@@ -4,7 +4,7 @@ export default defineConfig({
 	testDir: "tests/e2e",
 	timeout: 180_000,
 	expect: { timeout: 60_000 },
-	use: { baseURL: "http://127.0.0.1:8081" },
+	use: { baseURL: "http://127.0.0.1:8081", screenshot: "only-on-failure" },
 	reporter: [["list"]],
 	webServer: [
 		{
