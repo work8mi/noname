@@ -5761,6 +5761,10 @@ export class Library {
 		}
 	}
 	mode = {
+		"general-soul-samsara": {
+			name: "将魂轮回",
+			config: {},
+		},
 		identity: {
 			name: "身份",
 			connect: {

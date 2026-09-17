@@ -64,6 +64,7 @@ window.noname_package = {
 		tafang: "塔防",
 		stone: "炉石",
 		brawl: "乱斗",
+		"general-soul-samsara": "将魂轮回",
 	},
 	submode: {
 		identity: {

@@ -1,5 +1,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
+spawnSync("pnpm -F @noname/general-soul-samsara build", {
+	shell: true,
+	stdio: "inherit",
+});
+
 spawnSync("pnpm -F noname... build", {
 	shell: true,
 	stdio: "inherit",

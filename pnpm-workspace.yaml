@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - packages/extension/*
+  - general-soul-samsara
 
 allowBuilds:
   core-js-bundle: true
