@@ -7,6 +7,7 @@ import type { EventOption, RunEventDef } from "../run/events";
 import { addCard, addGold, addTreasure, equipSkill, hasSkill, heal, removeCardAt, slotList, upgradeCardAt, upgradeSkillAt, MAX_SKILL_LEVEL, type RunCard, type RunState } from "../run/state";
 import { availableRecipes, applyRecipe } from "../run/craft";
 import type { RecipeDef } from "../data/recipes";
+import type { RunProfile } from "../run/profile";
 import { availableSkillPool, cardKindLabel, cardPrice, MAX_SALES_PER_CHAPTER, removeCardPrice, rollShopCards, salesLeft, sellPrice, skillPrice } from "../run/rewards";
 import { QUALITY_LABELS, getTreasure, rollTreasure, treasurePrice, type TreasureDef } from "../data/treasures";
 import { isUpgradable, upgradeEffect } from "../data/upgrades";
@@ -21,7 +22,7 @@ export interface MetaUI {
 	openShop(state: RunState, rng: Rng): Promise<void>;
 	openRest(state: RunState): Promise<void>;
 	showChapterClear(chapter: number, state: RunState): Promise<void>;
-	showRunResult(result: "victory" | "defeat", state: RunState): Promise<void>;
+	showRunResult(result: "victory" | "defeat", state: RunState, profile?: RunProfile): Promise<void>;
 	setVisible(visible: boolean): void;
 	/** 调试用：按当前 view 状态强制重绘（状态被外部修改后）。 */
 	refresh(): void;
@@ -39,7 +40,7 @@ type View =
 	| { kind: "shop"; state: RunState; rng: Rng; resolve: Resolver<void> }
 	| { kind: "rest"; state: RunState; resolve: Resolver<void> }
 	| { kind: "chapter"; chapter: number; state: RunState; resolve: Resolver<void> }
-	| { kind: "result"; result: "victory" | "defeat"; state: RunState; resolve: Resolver<void> };
+	| { kind: "result"; result: "victory" | "defeat"; state: RunState; profile?: RunProfile; resolve: Resolver<void> };
 
 interface SlotPrompt {
 	skill: SkillMeta;
@@ -478,6 +479,7 @@ function renderView(current: View): VNode {
 			return h("div", { class: "rogue-panel" }, [
 				h("div", { class: "rogue-title" }, current.result === "victory" ? "章节通关" : "轮回终结"),
 				h("div", { class: "rogue-stats" }, `战斗 ${current.state.battleCount} 场　金币 ${current.state.gold}`),
+				current.profile ? h("div", { class: "rogue-subtitle" }, `累计 ${current.profile.runs} 局 · 通关 ${current.profile.victories} 次`) : null,
 				button("重新开始", () => window.location.reload()),
 			]);
 	}
@@ -730,9 +732,9 @@ export function mountMetaUI(): MetaUI {
 				view.value = { kind: "chapter", chapter, state, resolve };
 			});
 		},
-		showRunResult(result, state) {
+		showRunResult(result, state, profile) {
 			return new Promise(resolve => {
-				view.value = { kind: "result", result, state, resolve };
+				view.value = { kind: "result", result, state, profile, resolve };
 			});
 		},
 		setVisible(visible: boolean) {

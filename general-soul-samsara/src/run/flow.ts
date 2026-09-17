@@ -14,6 +14,7 @@ import { addGold, type RunState } from "./state";
 import { applyEventEffects, rollEvent } from "./events";
 import { battleOfferWeights, pickGrantedSkill, rollBossGold, rollEliteGold, rollGold, rollSkillOffers } from "./rewards";
 import { clearRun, saveRun } from "./save";
+import { loadProfile, recordRun, saveProfile, type RunProfile } from "./profile";
 
 /** 原型共两章（需求规格 §2.1）。 */
 export const MAX_CHAPTER = 2;
@@ -54,7 +55,10 @@ export async function runFlow(event: any, meta: MetaUI, state: RunState, debug: 
 		state.layer = node.layer + 1;
 	}
 	clearRun();
-	await meta.showRunResult(state.hp > 0 ? "victory" : "defeat", state);
+	const victory = state.hp > 0;
+	const profile = recordRun(loadProfile(), victory ? "victory" : "defeat");
+	saveProfile(profile);
+	await meta.showRunResult(victory ? "victory" : "defeat", state, profile);
 }
 
 async function resolveNode(
